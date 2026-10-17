@@ -42,8 +42,8 @@ ApplicationWindow {
     readonly property bool navigationVisible: workspaceModel
                                              ? workspaceModel.navigationVisible
                                              : navigationFallbackVisible
-    readonly property int roomSidebarWidth: sidebarVisible && !navigationVisible ? 268 : 0
-    readonly property int navigationWidth: navigationVisible ? 284 : 0
+    readonly property int roomSidebarWidth: sidebarVisible && !navigationVisible ? 360 : 0
+    readonly property int navigationWidth: navigationVisible ? 310 : 0
     readonly property int leftPanelWidth: Math.max(roomSidebarWidth, navigationWidth)
     readonly property int sidebarWidth: roomSidebarWidth
     readonly property var roomModel: appController
@@ -209,6 +209,15 @@ ApplicationWindow {
         else root.showNormal()
     }
 
+    function startResize(edge) {
+        if (root.visibility === Window.Maximized || root.visibility === Window.FullScreen) return
+        if (appController && appController.startSystemResize) {
+            appController.startSystemResize(edge)
+        } else if (root.startSystemResize) {
+            root.startSystemResize(edge)
+        }
+    }
+
     ListModel {
         id: previewRooms
 
@@ -324,6 +333,7 @@ ApplicationWindow {
         onOpenMonitoring: monitoringDrawer.open()
         onOpenWorkspace: workspacePresetsPanel.open()
         onOpenMaoziRank: root.toggleMaoziRank()
+        onOpenLogin: douyuLoginDialog.open()
         onSystemMoveRequested: root.startSystemMove()
         onToggleMaximizedRequested: root.toggleWindowMaximized()
         onToggleFullScreenRequested: root.toggleFullScreen()
@@ -381,7 +391,6 @@ ApplicationWindow {
     WorkspaceGrid {
         id: grid
         objectName: "workspaceGrid"
-        onFullScreenToggleRequested: root.toggleFullScreen()
         anchors.top: header.bottom
         anchors.left: leftPanelBoundary.right
         anchors.right: parent.right
@@ -421,6 +430,7 @@ ApplicationWindow {
                           ? root.workspaceModel.audioRoomId
                           : "无")))
                     : "无"
+        statusHint: grid.maximizedRoomId.length > 0 ? "已充满窗口 (双击画面或按 Esc 恢复宫格)" : ""
         visible: root.currentView === "monitoring"
     }
 
@@ -536,6 +546,24 @@ ApplicationWindow {
         workspaceModel: root.workspaceModel
     }
 
+    DouyuLoginDialog {
+        id: douyuLoginDialog
+        controller: root.appController
+    }
+
+    Connections {
+        target: root.appController
+        function onDanmakuSendResult(roomId, success, errorMessage) {
+            if (root.workspaceModel) {
+                if (success) {
+                    root.workspaceModel.setLastMessage("弹幕已发送", "info", 2000)
+                } else {
+                    root.workspaceModel.setLastMessage(errorMessage ? errorMessage : "弹幕发送失败", "error", 3500)
+                }
+            }
+        }
+    }
+
     Shortcut {
         sequence: "Ctrl+Shift+A"
         context: Qt.ApplicationShortcut
@@ -590,6 +618,104 @@ ApplicationWindow {
         context: Qt.ApplicationShortcut
         enabled: !root.editableFocus && root.visibility === Window.FullScreen
         onActivated: root.exitFullScreen()
+    }
+
+    Item {
+        id: resizeBorders
+        anchors.fill: parent
+        z: 9999
+        visible: root.visibility !== Window.Maximized && root.visibility !== Window.FullScreen
+
+        readonly property int borderThickness: 6
+        readonly property int cornerSize: 12
+
+        // Top edge
+        MouseArea {
+            anchors.left: parent.left
+            anchors.leftMargin: resizeBorders.cornerSize
+            anchors.right: parent.right
+            anchors.rightMargin: resizeBorders.cornerSize
+            anchors.top: parent.top
+            height: resizeBorders.borderThickness
+            cursorShape: Qt.SizeVerCursor
+            onPressed: root.startResize(Qt.TopEdge)
+        }
+
+        // Bottom edge
+        MouseArea {
+            anchors.left: parent.left
+            anchors.leftMargin: resizeBorders.cornerSize
+            anchors.right: parent.right
+            anchors.rightMargin: resizeBorders.cornerSize
+            anchors.bottom: parent.bottom
+            height: resizeBorders.borderThickness
+            cursorShape: Qt.SizeVerCursor
+            onPressed: root.startResize(Qt.BottomEdge)
+        }
+
+        // Left edge
+        MouseArea {
+            anchors.top: parent.top
+            anchors.topMargin: resizeBorders.cornerSize
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: resizeBorders.cornerSize
+            anchors.left: parent.left
+            width: resizeBorders.borderThickness
+            cursorShape: Qt.SizeHorCursor
+            onPressed: root.startResize(Qt.LeftEdge)
+        }
+
+        // Right edge
+        MouseArea {
+            anchors.top: parent.top
+            anchors.topMargin: resizeBorders.cornerSize
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: resizeBorders.cornerSize
+            anchors.right: parent.right
+            width: resizeBorders.borderThickness
+            cursorShape: Qt.SizeHorCursor
+            onPressed: root.startResize(Qt.RightEdge)
+        }
+
+        // Top-Left corner
+        MouseArea {
+            anchors.top: parent.top
+            anchors.left: parent.left
+            width: resizeBorders.cornerSize
+            height: resizeBorders.cornerSize
+            cursorShape: Qt.SizeFDiagCursor
+            onPressed: root.startResize(Qt.TopEdge | Qt.LeftEdge)
+        }
+
+        // Top-Right corner
+        MouseArea {
+            anchors.top: parent.top
+            anchors.right: parent.right
+            width: resizeBorders.cornerSize
+            height: resizeBorders.cornerSize
+            cursorShape: Qt.SizeBDiagCursor
+            onPressed: root.startResize(Qt.TopEdge | Qt.RightEdge)
+        }
+
+        // Bottom-Left corner
+        MouseArea {
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            width: resizeBorders.cornerSize
+            height: resizeBorders.cornerSize
+            cursorShape: Qt.SizeBDiagCursor
+            onPressed: root.startResize(Qt.BottomEdge | Qt.LeftEdge)
+        }
+
+        // Bottom-Right corner
+        MouseArea {
+            anchors.bottom: parent.bottom
+            anchors.right: parent.right
+            width: resizeBorders.cornerSize
+            height: resizeBorders.cornerSize
+            cursorShape: Qt.SizeFDiagCursor
+            onPressed: root.startResize(Qt.BottomEdge | Qt.RightEdge)
+        }
     }
 
 }

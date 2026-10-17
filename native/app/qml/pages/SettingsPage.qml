@@ -220,6 +220,7 @@ Item {
                     font.pixelSize: 14
                 }
                 TextField {
+                    id: eventNameInput
                     objectName: "eventMappingName"
                     width: parent.width
                     color: Theme.text
@@ -228,8 +229,36 @@ Item {
                     palette.highlight: Theme.accent
                     text: root.eventMapping.event
                     placeholderText: "活动名称"
+                    rightPadding: clearEventNameBtn.visible ? 28 : 8
                     maximumLength: 80
                     onTextEdited: root.eventMapping.event = text
+
+                    ToolButton {
+                        id: clearEventNameBtn
+                        anchors.right: parent.right
+                        anchors.rightMargin: 4
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 20
+                        height: 20
+                        visible: eventNameInput.text.length > 0
+                        Accessible.name: "清空活动名称"
+                        onClicked: {
+                            eventNameInput.clear()
+                            root.eventMapping.event = ""
+                            eventNameInput.forceActiveFocus()
+                        }
+                        contentItem: Image {
+                            anchors.centerIn: parent
+                            width: 12
+                            height: 12
+                            source: Qt.resolvedUrl("../assets/icons/x.svg")
+                            opacity: parent.hovered ? 1.0 : 0.6
+                        }
+                        background: Rectangle {
+                            radius: 10
+                            color: parent.hovered ? Theme.controlSurface : "transparent"
+                        }
+                    }
                 }
                 Repeater {
                     objectName: "eventMappingRows"

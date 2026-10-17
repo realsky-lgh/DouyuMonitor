@@ -24,6 +24,17 @@ def _configure_stdio() -> None:
         except (AttributeError, ValueError):
             pass
 
+    # httpx does not recognize 'socks://' scheme from ALL_PROXY/all_proxy environment
+    # variables (it requires 'socks5://' with socksio installed, or ignores socks:// with ValueError).
+    # If ALL_PROXY starts with 'socks://', normalise it or drop it so HTTP/HTTPS requests succeed.
+    for proxy_var in ("ALL_PROXY", "all_proxy"):
+        val = os.environ.get(proxy_var)
+        if val:
+            if val.startswith("socks://"):
+                os.environ[proxy_var] = "socks5://" + val[len("socks://"):]
+            elif not val.startswith(("http://", "https://", "socks5://", "socks5h://")):
+                del os.environ[proxy_var]
+
 
 def _request_id_from_line(line: str) -> int:
     try:

@@ -7,10 +7,38 @@ Item {
 
     property var controller: null
     signal fullScreenToggleRequested()
+    property string maximizedRoomId: ""
     property var roomModel: null
     property string layoutMode: "auto"
     property string primaryRoomId: ""
     property string secondaryPrimaryRoomId: ""
+
+    function toggleMaximizeRoom(targetRoomId) {
+        if (maximizedRoomId === targetRoomId) {
+            maximizedRoomId = ""
+        } else {
+            maximizedRoomId = targetRoomId
+        }
+    }
+
+    function restoreGrid() {
+        maximizedRoomId = ""
+    }
+
+    onRoomCountChanged: {
+        if (maximizedRoomId.length === 0) return
+        var exists = false
+        for (var i = 0; i < roomRepeater.count; ++i) {
+            var item = roomRepeater.itemAt(i)
+            if (item && item.roomId === maximizedRoomId) {
+                exists = true
+                break
+            }
+        }
+        if (!exists) {
+            maximizedRoomId = ""
+        }
+    }
     property color canvasColor: Theme.canvas
     property color surfaceColor: Theme.controlSurface
     property color borderColor: Theme.border
@@ -210,13 +238,23 @@ Item {
             model: root.roomModel
 
             delegate: RoomTile {
+                id: tileItem
                 readonly property var tileGeometry: root.geometryFor(index)
-                x: tileGeometry.x
-                y: tileGeometry.y
-                width: tileGeometry.width
-                height: tileGeometry.height
+                readonly property bool isTileMaximized: root.maximizedRoomId.length > 0 && roomId === root.maximizedRoomId
+                readonly property bool isHiddenByMaximize: root.maximizedRoomId.length > 0 && !isTileMaximized
+
+                visible: !isHiddenByMaximize
+                x: isTileMaximized ? 0 : tileGeometry.x
+                y: isTileMaximized ? 0 : tileGeometry.y
+                width: isTileMaximized ? layoutSurface.width : tileGeometry.width
+                height: isTileMaximized ? layoutSurface.height : tileGeometry.height
+                z: isTileMaximized ? 50 : 1
+
+                isMaximized: isTileMaximized
                 controller: root.controller
-                onFullScreenToggleRequested: root.fullScreenToggleRequested()
+                onFullScreenToggleRequested: function(targetRoomId) {
+                    root.toggleMaximizeRoom(targetRoomId && targetRoomId.length > 0 ? targetRoomId : roomId)
+                }
                 secondaryPrimary: roomId === root.secondaryPrimaryRoomId
                 borderColor: root.borderColor
                 accentColor: root.accentColor
@@ -224,6 +262,12 @@ Item {
                 mutedTextColor: root.mutedTextColor
             }
         }
+    }
+
+    Shortcut {
+        sequence: "Escape"
+        enabled: root.maximizedRoomId.length > 0
+        onActivated: root.maximizedRoomId = ""
     }
 
     Column {

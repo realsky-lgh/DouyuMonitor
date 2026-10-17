@@ -16,6 +16,7 @@
 #include <mpv/render.h>
 #include <mpv/render_gl.h>
 
+#include <clocale>
 #include <cmath>
 
 namespace {
@@ -34,7 +35,9 @@ std::atomic_uint64_t g_lastCoreTeardownSequence = 0;
 void *getProcAddress(void *, const char *name)
 {
     QOpenGLContext *context = QOpenGLContext::currentContext();
-    return context != nullptr ? context->getProcAddress(QByteArray(name)) : nullptr;
+    return context != nullptr
+        ? reinterpret_cast<void *>(context->getProcAddress(QByteArray(name)))
+        : nullptr;
 }
 
 QString safeErrorLabelForCode(const QString &errorCode)
@@ -285,6 +288,11 @@ MpvQuickItem::MpvQuickItem(QQuickItem *parent)
 {
     setMirrorVertically(true);
     setTextureFollowsItemSize(true);
+#ifndef Q_OS_WIN
+    // libmpv on POSIX rejects mpv_create() unless LC_NUMERIC is "C", but
+    // QGuiApplication applies the user's locale (e.g. zh_CN) during startup.
+    std::setlocale(LC_NUMERIC, "C");
+#endif
     mpv_ = mpv_create();
     if (mpv_ == nullptr) {
         errorCode_ = QStringLiteral("PLAYER_UNAVAILABLE");

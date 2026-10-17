@@ -77,11 +77,38 @@ Popup {
                 placeholderText: "预设名称"
                 color: Theme.text
                 placeholderTextColor: Theme.mutedText
+                rightPadding: clearPresetBtn.visible ? 26 : 8
                 selectByMouse: true
                 background: Rectangle {
                     radius: Theme.radiusSmall
                     color: Theme.well
                     border.color: Theme.border
+                }
+
+                ToolButton {
+                    id: clearPresetBtn
+                    anchors.right: parent.right
+                    anchors.rightMargin: 3
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 20
+                    height: 20
+                    visible: presetNameInput.text.length > 0
+                    Accessible.name: "清空输入"
+                    onClicked: {
+                        presetNameInput.clear()
+                        presetNameInput.forceActiveFocus()
+                    }
+                    contentItem: Image {
+                        anchors.centerIn: parent
+                        width: 12
+                        height: 12
+                        source: Qt.resolvedUrl("../assets/icons/x.svg")
+                        opacity: parent.hovered ? 1.0 : 0.6
+                    }
+                    background: Rectangle {
+                        radius: 10
+                        color: parent.hovered ? Theme.controlSurface : "transparent"
+                    }
                 }
             }
             Button {

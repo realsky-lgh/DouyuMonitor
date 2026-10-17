@@ -31,6 +31,8 @@ class WindowsTrayService;
 class QSettings;
 class UpdateChecker;
 class QTimer;
+class DouyuAuthService;
+class DouyuDanmakuSender;
 
 class AppController final : public QObject {
     Q_OBJECT
@@ -60,6 +62,13 @@ class AppController final : public QObject {
     Q_PROPERTY(QVariantMap maoziTeamImport READ maoziTeamImport NOTIFY maoziTeamImportChanged)
     Q_PROPERTY(bool workspaceUnsaved READ workspaceUnsaved NOTIFY workspaceSaveStateChanged)
     Q_PROPERTY(QString eventMappingJson READ eventMappingJson NOTIFY eventMappingChanged)
+    Q_PROPERTY(bool isLoggedIn READ isLoggedIn NOTIFY authChanged)
+    Q_PROPERTY(QString loginNickname READ loginNickname NOTIFY authChanged)
+    Q_PROPERTY(QString loginAvatarUrl READ loginAvatarUrl NOTIFY authChanged)
+    Q_PROPERTY(QString loginUid READ loginUid NOTIFY authChanged)
+    Q_PROPERTY(int qrLoginState READ qrLoginState NOTIFY qrLoginStateChanged)
+    Q_PROPERTY(QString qrLoginUrl READ qrLoginUrl NOTIFY qrLoginStateChanged)
+    Q_PROPERTY(QString qrLoginStatusText READ qrLoginStatusText NOTIFY qrLoginStateChanged)
 
 public:
     explicit AppController(QString serviceProgram,
@@ -168,6 +177,7 @@ public:
     Q_INVOKABLE void detachPlayer(const QString &roomId, MpvQuickItem *item);
     Q_INVOKABLE void minimizeWindow();
     Q_INVOKABLE void restoreFromMinimized();
+    Q_INVOKABLE bool startSystemResize(int edge);
     Q_INVOKABLE void toggleMaximizedWindow();
     Q_INVOKABLE void toggleFullScreen();
     Q_INVOKABLE void exitFullScreen();
@@ -180,6 +190,19 @@ public:
     Q_INVOKABLE void restoreFromBackground();
     Q_INVOKABLE void requestQuit();
     Q_INVOKABLE void shutdown();
+
+    bool isLoggedIn() const noexcept;
+    QString loginNickname() const;
+    QString loginAvatarUrl() const;
+    QString loginUid() const;
+    int qrLoginState() const noexcept;
+    QString qrLoginUrl() const;
+    QString qrLoginStatusText() const;
+
+    Q_INVOKABLE void startQrLogin();
+    Q_INVOKABLE void cancelQrLogin();
+    Q_INVOKABLE void logout();
+    Q_INVOKABLE void sendDanmaku(const QString &roomId, const QString &content);
 
 #ifdef DOUYU_TESTING
     int attachedPlayerCountForTest() const;
@@ -201,6 +224,9 @@ signals:
     void backgroundHostedChanged();
     void windowMinimizedChanged();
     void closeBehaviorChanged();
+    void authChanged();
+    void qrLoginStateChanged();
+    void danmakuSendResult(const QString &roomId, bool success, const QString &errorMessage);
 
 private:
     void restoreWorkspace();
@@ -266,4 +292,9 @@ private:
     QVariantList maoziTeamImportSourceEntries_;
     QHash<QString, RoomLiveStatus> lastLiveStatuses_;
     QHash<QString, RoomLiveStatus> favoriteLiveStatuses_;
+    std::unique_ptr<DouyuAuthService> authService_;
+    std::unique_ptr<DouyuDanmakuSender> danmakuSender_;
+    int qrLoginState_ = 0;
+    QString qrLoginUrl_;
+    QString qrLoginStatusText_;
 };

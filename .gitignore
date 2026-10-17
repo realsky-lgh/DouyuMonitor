@@ -5,6 +5,7 @@
 .worktrees/
 
 # Native build and dependency artifacts
+/out/
 /native/.venv/
 /native/dependencies/
 /native/out/

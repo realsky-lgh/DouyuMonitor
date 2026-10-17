@@ -39,6 +39,13 @@ Item {
         font.bold: root.rendering === "advanced"
     }
 
+    TextMetrics {
+        id: localMetrics
+        font.family: root.fontFamily
+        font.pixelSize: root.fontSize
+        font.bold: true
+    }
+
     Component {
         id: danmakuLineComponent
         DanmakuLine { }
@@ -84,13 +91,12 @@ Item {
     }
 
     function removeActiveItem(item) {
-        const remaining = []
-        for (let index = 0; index < activeItems.length; ++index) {
-            const current = activeItems[index]
-            if (current && current !== item) remaining.push(current)
+        if (!item) return
+        const index = activeItems.indexOf(item)
+        if (index !== -1) {
+            activeItems.splice(index, 1)
         }
-        activeItems = remaining
-        if (item) item.destroy()
+        item.destroy()
     }
 
     function clearActiveItems() {
@@ -141,8 +147,49 @@ Item {
         if (!line) return
 
         line.finished.connect(function() { root.removeActiveItem(line) })
-        activeItems = activeItems.concat([line])
+        activeItems.push(line)
         pendingMessage = ({})
+    }
+
+    function showLocalDanmaku(text) {
+        if (!text || text.trim().length === 0 || width <= 0 || usableHeight <= 0) return
+        const trimmed = text.trim()
+        localMetrics.text = trimmed
+        const candidate = {
+            width: Math.ceil(localMetrics.advanceWidth) + 24,
+            containerWidth: width,
+            launchedAt: Date.now(),
+            durationMs: durationMs,
+            fontSize: fontSize
+        }
+        const lanes = DanmakuLaneScheduler.lanes(usableHeight, fontSize, region, density)
+        let lane = DanmakuLaneScheduler.selectLane(lanes, activeDescriptors(), candidate)
+        if (lane === null) {
+            lane = lanes.length > 0 ? lanes[0] : { index: 0, top: 0 }
+        }
+
+        if (activeItems.length >= activeItemLimit && activeItems.length > 0) {
+            root.removeActiveItem(activeItems[0])
+        }
+
+        const line = danmakuLineComponent.createObject(root, {
+            messageText: trimmed,
+            laneIndex: lane.index,
+            laneTop: safeTopInset + lane.top,
+            lineWidth: candidate.width,
+            containerWidth: candidate.containerWidth,
+            durationMs: candidate.durationMs,
+            fontSize: candidate.fontSize,
+            fontFamily: fontFamily,
+            messageOpacity: 1.0,
+            rendering: rendering,
+            launchedAt: candidate.launchedAt,
+            isSelf: true
+        })
+        if (!line) return
+
+        line.finished.connect(function() { root.removeActiveItem(line) })
+        activeItems.push(line)
     }
 
     function relayoutActiveItems() {

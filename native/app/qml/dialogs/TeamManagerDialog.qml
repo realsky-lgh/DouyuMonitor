@@ -189,8 +189,35 @@ Dialog {
                 placeholderText: "队伍名称"
                 color: Theme.text
                 placeholderTextColor: Theme.mutedText
+                rightPadding: clearTeamNameBtn.visible ? 26 : 8
                 selectByMouse: true
                 maximumLength: 30
+
+                ToolButton {
+                    id: clearTeamNameBtn
+                    anchors.right: parent.right
+                    anchors.rightMargin: 3
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 20
+                    height: 20
+                    visible: teamNameInput.text.length > 0
+                    Accessible.name: "清空输入"
+                    onClicked: {
+                        teamNameInput.clear()
+                        teamNameInput.forceActiveFocus()
+                    }
+                    contentItem: Image {
+                        anchors.centerIn: parent
+                        width: 12
+                        height: 12
+                        source: Qt.resolvedUrl("../assets/icons/x.svg")
+                        opacity: parent.hovered ? 1.0 : 0.6
+                    }
+                    background: Rectangle {
+                        radius: 10
+                        color: parent.hovered ? Theme.controlSurface : "transparent"
+                    }
+                }
             }
 
             Button {

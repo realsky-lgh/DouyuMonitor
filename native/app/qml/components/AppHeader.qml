@@ -14,6 +14,7 @@ Rectangle {
     signal openMonitoring()
     signal openWorkspace()
     signal openMaoziRank()
+    signal openLogin()
     signal systemMoveRequested()
     signal toggleMaximizedRequested()
     signal toggleFullScreenRequested()
@@ -80,31 +81,6 @@ Rectangle {
             }
         }
 
-        ToolButton {
-            objectName: "maoziRankButton"
-            width: Theme.controlHeight
-            height: Theme.controlHeight
-            text: "郎团S1野榜"
-            Accessible.name: text
-            ToolTip.visible: hovered
-            ToolTip.text: Accessible.name
-            onClicked: if (root.controller) {
-                root.openMaoziRank()
-            }
-            contentItem: Image {
-                objectName: "maoziRankIcon"
-                anchors.centerIn: parent
-                width: 16
-                height: 16
-                source: Qt.resolvedUrl("../assets/icons/trophy.svg")
-                opacity: parent.hovered ? 1 : 0.82
-            }
-            background: Rectangle {
-                radius: Theme.radiusSmall
-                color: parent.down ? Theme.well : (parent.hovered ? Theme.controlSurface : "transparent")
-            }
-        }
-
         Rectangle {
             objectName: "brandMark"
             width: 28
@@ -116,8 +92,8 @@ Rectangle {
             Image {
                 objectName: "brandIcon"
                 anchors.centerIn: parent
-                width: 18
-                height: 18
+                width: 22
+                height: 22
                 source: Qt.resolvedUrl("../assets/douyu_monitor.svg")
                 fillMode: Image.PreserveAspectFit
             }
@@ -130,7 +106,7 @@ Rectangle {
             Text {
                 color: Theme.text
                 font.bold: true
-                font.pixelSize: 14
+                font.pixelSize: 16
                 text: "斗鱼多房间监控"
             }
         }
@@ -162,6 +138,97 @@ Rectangle {
         anchors.rightMargin: 8
         anchors.verticalCenter: parent.verticalCenter
         spacing: 4
+
+        ToolButton {
+            id: userLoginButton
+            objectName: "userLoginButton"
+            height: Theme.controlHeight
+            implicitWidth: (root.controller && root.controller.isLoggedIn) ? Math.max(90, userRow.implicitWidth + 16) : 74
+            Accessible.name: (root.controller && root.controller.isLoggedIn) ? ("斗鱼账号: " + root.controller.loginNickname) : "登录斗鱼"
+            ToolTip.visible: hovered
+            ToolTip.text: Accessible.name
+            onClicked: {
+                if (root.controller && root.controller.isLoggedIn) {
+                    userMenu.open()
+                } else {
+                    root.openLogin()
+                }
+            }
+            contentItem: Item {
+                anchors.fill: parent
+
+                Row {
+                    id: userRow
+                    anchors.centerIn: parent
+                    spacing: 6
+                    visible: root.controller && root.controller.isLoggedIn
+
+                    Rectangle {
+                        width: 20
+                        height: 20
+                        radius: 10
+                        color: Theme.accent
+                        clip: true
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Image {
+                            anchors.fill: parent
+                            source: (root.controller && root.controller.loginAvatarUrl) ? root.controller.loginAvatarUrl : ""
+                            fillMode: Image.PreserveAspectCrop
+                            visible: status === Image.Ready
+                        }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: (root.controller && root.controller.loginNickname && root.controller.loginNickname.length > 0)
+                                  ? root.controller.loginNickname.substring(0, 1) : "鱼"
+                            color: "#FFFFFF"
+                            font.bold: true
+                            font.pixelSize: 11
+                        }
+                    }
+
+                    Text {
+                        text: (root.controller && root.controller.loginNickname) ? root.controller.loginNickname : "已登录"
+                        color: Theme.text
+                        font.pixelSize: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        elide: Text.ElideRight
+                        maximumLineCount: 1
+                        width: Math.min(80, implicitWidth)
+                    }
+                }
+
+                Row {
+                    id: loginRow
+                    anchors.centerIn: parent
+                    spacing: 5
+                    visible: !(root.controller && root.controller.isLoggedIn)
+
+                    Image {
+                        width: 14
+                        height: 14
+                        source: Qt.resolvedUrl("../assets/icons/user.svg")
+                        anchors.verticalCenter: parent.verticalCenter
+                        opacity: 0.9
+                    }
+
+                    Text {
+                        text: "登录"
+                        color: Theme.accent
+                        font.bold: true
+                        font.pixelSize: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+            }
+            background: Rectangle {
+                radius: Theme.radiusSmall
+                color: parent.down ? Theme.well : (parent.hovered ? Theme.controlSurface : "transparent")
+                border.color: (root.controller && root.controller.isLoggedIn) ? Theme.border : Theme.accent
+                border.width: 1
+            }
+        }
 
         ToolButton {
             objectName: "danmakuButton"
@@ -312,7 +379,7 @@ Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
                     color: Theme.text
                     font.bold: true
-                    font.pixelSize: 11
+                    font.pixelSize: 13
                     text: "声音总控"
                 }
 
@@ -320,16 +387,16 @@ Rectangle {
                     objectName: "closeSoundMasterButton"
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 20
-                    height: 20
+                    width: 24
+                    height: 24
                     Accessible.name: "关闭声音总控"
                     ToolTip.visible: hovered
                     ToolTip.text: Accessible.name
                     onClicked: soundMasterPopover.close()
                     contentItem: Image {
                         anchors.centerIn: parent
-                        width: 12
-                        height: 12
+                        width: 14
+                        height: 14
                         source: Qt.resolvedUrl("../assets/icons/x.svg")
                         opacity: parent.hovered ? 1 : 0.78
                     }
@@ -343,7 +410,7 @@ Rectangle {
             ToolButton {
                 objectName: "globalMuteButton"
                 width: parent.width
-                height: 28
+                height: 32
                 checkable: false
                 checked: root.workspaceModel ? root.workspaceModel.globalMuted : false
                 Accessible.name: checked ? "取消全局静音" : "全局静音"
@@ -356,34 +423,34 @@ Rectangle {
                     color: "#d6dde5"
                     leftPadding: 8
                     verticalAlignment: Text.AlignVCenter
-                    font.pixelSize: 10
+                    font.pixelSize: 12
                 }
                 background: Rectangle { radius: Theme.radiusSmall; color: parent.hovered ? "#241b17" : "transparent" }
             }
             Row {
                 width: parent.width
-                spacing: 2
+                spacing: 4
                 ToolButton {
                     objectName: "audioSingleButton"
                     width: (parent.width - parent.spacing) / 2
-                    height: 28
+                    height: 32
                     text: "单声道"
                     checked: root.workspaceModel ? root.workspaceModel.audioMode === "single" : true
                     Accessible.name: "单声道"
                     onClicked: if (root.controller) root.controller.setAudioMode("single")
-                    contentItem: Text { text: parent.text; color: parent.checked ? "#f4f6f8" : "#9ba5b1"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.pixelSize: 10 }
-                    background: Rectangle { radius: 3; color: parent.checked ? "#3a3025" : (parent.hovered ? "#252c34" : "transparent"); border.color: parent.checked ? "#9b572f" : "transparent" }
+                    contentItem: Text { text: parent.text; color: parent.checked ? "#f4f6f8" : "#9ba5b1"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.pixelSize: 12 }
+                    background: Rectangle { radius: 4; color: parent.checked ? "#3a3025" : (parent.hovered ? "#252c34" : "transparent"); border.color: parent.checked ? "#9b572f" : "transparent" }
                 }
                 ToolButton {
                     objectName: "audioMultiButton"
                     width: (parent.width - parent.spacing) / 2
-                    height: 28
+                    height: 32
                     text: "多声道"
                     checked: root.workspaceModel ? root.workspaceModel.audioMode === "multi" : false
                     Accessible.name: "多声道"
                     onClicked: if (root.controller) root.controller.setAudioMode("multi")
-                    contentItem: Text { text: parent.text; color: parent.checked ? "#f4f6f8" : "#9ba5b1"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.pixelSize: 10 }
-                    background: Rectangle { radius: 3; color: parent.checked ? "#3a3025" : (parent.hovered ? "#252c34" : "transparent"); border.color: parent.checked ? "#9b572f" : "transparent" }
+                    contentItem: Text { text: parent.text; color: parent.checked ? "#f4f6f8" : "#9ba5b1"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.pixelSize: 12 }
+                    background: Rectangle { radius: 4; color: parent.checked ? "#3a3025" : (parent.hovered ? "#252c34" : "transparent"); border.color: parent.checked ? "#9b572f" : "transparent" }
                 }
             }
         }
@@ -454,6 +521,51 @@ Rectangle {
             contentItem: Text { text: parent.text; color: parent.enabled ? Theme.text : Theme.mutedText; leftPadding: 12; verticalAlignment: Text.AlignVCenter }
             background: Rectangle {
                 objectName: "dualPrimaryLayoutOptionBackground"
+                color: parent.highlighted ? Theme.well : "transparent"
+                radius: Theme.radiusSmall
+            }
+        }
+    }
+
+    Menu {
+        id: userMenu
+        objectName: "userMenu"
+        y: root.height + 4
+        x: Math.max(8, actionButtons.x + userLoginButton.x - 40)
+        title: "账号信息"
+
+        background: Rectangle {
+            implicitWidth: 160
+            color: Theme.controlSurface
+            border.color: Theme.border
+            radius: Theme.radiusSmall
+        }
+
+        MenuItem {
+            enabled: false
+            text: root.controller && root.controller.loginUid ? ("UID: " + root.controller.loginUid) : ""
+            contentItem: Text {
+                text: parent.text
+                color: Theme.mutedText
+                leftPadding: 12
+                font.pixelSize: 11
+                verticalAlignment: Text.AlignVCenter
+            }
+        }
+
+        MenuItem {
+            text: "退出登录"
+            onTriggered: {
+                if (root.controller) root.controller.logout()
+            }
+            contentItem: Text {
+                text: parent.text
+                color: "#EF4444"
+                leftPadding: 12
+                font.pixelSize: 13
+                verticalAlignment: Text.AlignVCenter
+            }
+            background: Rectangle {
                 color: parent.highlighted ? Theme.well : "transparent"
                 radius: Theme.radiusSmall
             }

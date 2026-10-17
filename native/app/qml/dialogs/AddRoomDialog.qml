@@ -103,12 +103,39 @@ Dialog {
                 placeholderText: "输入房间号、斗鱼链接或主播名字"
                 color: Theme.text
                 placeholderTextColor: Theme.mutedText
+                rightPadding: clearButton.visible ? 28 : 8
                 selectByMouse: true
                 onAccepted: root.submit()
                 background: Rectangle {
                     radius: Theme.radiusSmall
                     color: Theme.well
                     border.color: Theme.border
+                }
+
+                ToolButton {
+                    id: clearButton
+                    anchors.right: parent.right
+                    anchors.rightMargin: 4
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 20
+                    height: 20
+                    visible: roomInput.text.length > 0
+                    Accessible.name: "清空输入"
+                    onClicked: {
+                        roomInput.clear()
+                        roomInput.forceActiveFocus()
+                    }
+                    contentItem: Image {
+                        anchors.centerIn: parent
+                        width: 12
+                        height: 12
+                        source: Qt.resolvedUrl("../assets/icons/x.svg")
+                        opacity: parent.hovered ? 1.0 : 0.6
+                    }
+                    background: Rectangle {
+                        radius: 10
+                        color: parent.hovered ? Theme.controlSurface : "transparent"
+                    }
                 }
             }
 

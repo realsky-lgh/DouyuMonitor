@@ -206,7 +206,7 @@ Item {
         visible: false
         placeholderText: "输入房间号"
         color: Theme.text
-        placeholderTextColor: Theme.mutedText
+        rightPadding: clearRoomEditBtn.visible ? 24 : 6
         selectByMouse: true
         font.pixelSize: 10
         onAccepted: root.submitConfirmation()
@@ -214,6 +214,32 @@ Item {
             radius: 4
             color: Theme.well
             border.color: roomEdit.activeFocus ? Theme.accent : Theme.border
+        }
+
+        ToolButton {
+            id: clearRoomEditBtn
+            anchors.right: parent.right
+            anchors.rightMargin: 3
+            anchors.verticalCenter: parent.verticalCenter
+            width: 18
+            height: 18
+            visible: roomEdit.text.length > 0
+            Accessible.name: "清空输入"
+            onClicked: {
+                roomEdit.clear()
+                roomEdit.forceActiveFocus()
+            }
+            contentItem: Image {
+                anchors.centerIn: parent
+                width: 10
+                height: 10
+                source: Qt.resolvedUrl("../assets/icons/x.svg")
+                opacity: parent.hovered ? 1.0 : 0.6
+            }
+            background: Rectangle {
+                radius: 9
+                color: parent.hovered ? Theme.controlSurface : "transparent"
+            }
         }
         states: State {
             name: "visible"

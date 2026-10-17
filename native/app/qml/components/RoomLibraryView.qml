@@ -27,6 +27,12 @@ Item {
             const entry = source[index]
             if (root.favoritesOnly ? entry.favorite : entry.lastOpenedAtMs > 0) result.push(entry)
         }
+        result.sort(function(left, right) {
+            const leftOnline = (left.online || left.active) ? 1 : 0
+            const rightOnline = (right.online || right.active) ? 1 : 0
+            if (leftOnline !== rightOnline) return rightOnline - leftOnline
+            return 0
+        })
         root.visibleRooms = result
     }
 
@@ -68,11 +74,11 @@ Item {
 
             Rectangle {
                 id: avatar
-                x: 6
+                x: 8
                 anchors.verticalCenter: parent.verticalCenter
-                width: 32
-                height: 32
-                radius: 16
+                width: 48
+                height: 48
+                radius: 24
                 color: entry.active ? Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.18) : Theme.well
 
                 Image {
@@ -93,18 +99,18 @@ Item {
                     visible: !roomAvatarImage.visible
                     color: root.textColor
                     font.bold: true
-                    font.pixelSize: 12
+                    font.pixelSize: 22
                     text: entry.anchorName.length > 0 ? entry.anchorName.slice(0, 1) : entry.roomId.slice(0, 1)
                 }
             }
 
             Column {
                 anchors.left: avatar.right
-                anchors.leftMargin: 7
+                anchors.leftMargin: 10
                 anchors.right: roomActionBar.left
                 anchors.rightMargin: 6
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 2
+                spacing: 4
 
                 Text {
                     objectName: "libraryRoomTitle"
@@ -112,30 +118,30 @@ Item {
                     color: root.textColor
                     elide: Text.ElideRight
                     font.bold: true
-                    font.pixelSize: 11
+                    font.pixelSize: 22
                     text: entry.anchorName.length > 0 ? entry.anchorName : entry.roomId
                 }
                 Text {
                     width: parent.width
                     color: root.mutedTextColor
                     elide: Text.ElideRight
-                    font.pixelSize: 9
+                    font.pixelSize: 18
                     text: entry.title.length > 0 ? entry.title : entry.roomId
                 }
                 Row {
-                    spacing: 4
+                    spacing: 6
 
                     Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 5
-                        height: 5
-                        radius: 3
-                        color: entry.active ? Theme.online : Theme.mutedText
+                        width: 8
+                        height: 8
+                        radius: 4
+                        color: (entry.active || entry.online) ? Theme.online : Theme.mutedText
                     }
                     Text {
-                        color: entry.active ? Theme.online : root.mutedTextColor
-                        font.pixelSize: 9
-                        text: entry.active ? "当前播放" : root.openedLabel(entry.lastOpenedAtMs)
+                        color: (entry.active || entry.online) ? Theme.online : root.mutedTextColor
+                        font.pixelSize: 16
+                        text: entry.active ? "当前播放" : (entry.online ? "直播中" : root.openedLabel(entry.lastOpenedAtMs))
                     }
                 }
             }
@@ -200,7 +206,7 @@ Item {
             anchors.centerIn: parent
             visible: historyList.count === 0
             color: root.mutedTextColor
-            font.pixelSize: 11
+            font.pixelSize: 18
             text: root.favoritesOnly ? "暂无收藏" : "暂无历史记录"
         }
     }

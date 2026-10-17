@@ -54,96 +54,123 @@ Rectangle {
                 color: root.textColor
                 elide: Text.ElideRight
                 font.bold: true
-                font.pixelSize: 15
+                font.pixelSize: 20
                 text: "房间列表"
             }
             ToolButton {
                 id: addButton
                 objectName: "quickAddButton"
                 anchors.verticalCenter: parent.verticalCenter
-                width: 28
-                height: 28
+                width: 32
+                height: 32
                 Accessible.name: "添加房间"
                 ToolTip.visible: hovered
                 ToolTip.text: Accessible.name
                 onClicked: root.addRoomRequested()
-                contentItem: Image { anchors.centerIn: parent; width: 17; height: 17; source: Qt.resolvedUrl("../assets/icons/plus.svg"); opacity: parent.hovered ? 1 : 0.8 }
-                background: Rectangle { radius: 4; border.color: root.borderColor; color: parent.hovered ? "#252c34" : "#171d25" }
+                contentItem: Image { anchors.centerIn: parent; width: 18; height: 18; source: Qt.resolvedUrl("../assets/icons/plus.svg"); opacity: parent.hovered ? 1 : 0.8 }
+                background: Rectangle { radius: 5; border.color: root.borderColor; color: parent.hovered ? "#252c34" : "#171d25" }
             }
         }
 
         Row {
             x: 10
             width: parent.width - 20
-            height: 38
-            spacing: 5
+            height: 48
+            spacing: 6
 
             TextField {
                 id: roomInput
-                width: parent.width - addRoomButton.width - 5
-                height: 29
+                width: parent.width - addRoomButton.width - 6
+                height: 38
                 placeholderText: "输入房间号"
                 color: root.textColor
                 placeholderTextColor: root.mutedTextColor
-                font.pixelSize: 11
+                font.pixelSize: 18
+                rightPadding: clearButton.visible ? 30 : 8
                 selectByMouse: true
                 onAccepted: root.submitRoom()
-                background: Rectangle { radius: 4; color: "#10151b"; border.color: roomInput.activeFocus ? root.accentColor : root.borderColor }
+                background: Rectangle { radius: 6; color: "#10151b"; border.color: roomInput.activeFocus ? root.accentColor : root.borderColor }
+
+                ToolButton {
+                    id: clearButton
+                    anchors.right: parent.right
+                    anchors.rightMargin: 4
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 22
+                    height: 22
+                    visible: roomInput.text.length > 0
+                    Accessible.name: "清空输入"
+                    onClicked: {
+                        roomInput.clear()
+                        roomInput.forceActiveFocus()
+                    }
+                    contentItem: Image {
+                        anchors.centerIn: parent
+                        width: 14
+                        height: 14
+                        source: Qt.resolvedUrl("../assets/icons/x.svg")
+                        opacity: parent.hovered ? 1.0 : 0.6
+                    }
+                    background: Rectangle {
+                        radius: 11
+                        color: parent.hovered ? "#252c34" : "transparent"
+                    }
+                }
             }
             ToolButton {
                 id: addRoomButton
-                width: 29
-                height: 29
+                width: 38
+                height: 38
                 enabled: roomInput.text.trim().length > 0 && root.controller !== null
                 Accessible.name: "确认添加房间"
                 ToolTip.visible: hovered
                 ToolTip.text: Accessible.name
                 onClicked: root.submitRoom()
-                contentItem: Image { anchors.centerIn: parent; width: 16; height: 16; source: Qt.resolvedUrl("../assets/icons/plus.svg"); opacity: parent.enabled ? 1 : 0.35 }
-                background: Rectangle { radius: 4; color: parent.hovered && parent.enabled ? "#2a211c" : "#171d25"; border.color: root.borderColor }
+                contentItem: Image { anchors.centerIn: parent; width: 20; height: 20; source: Qt.resolvedUrl("../assets/icons/plus.svg"); opacity: parent.enabled ? 1 : 0.35 }
+                background: Rectangle { radius: 6; color: parent.hovered && parent.enabled ? "#2a211c" : "#171d25"; border.color: root.borderColor }
             }
         }
 
         Row {
             x: 10
             width: parent.width - 20
-            height: 38
-            spacing: 4
+            height: 46
+            spacing: 6
 
             ToolButton {
-                height: 27
-                width: 52
+                height: 36
+                width: 72
                 checkable: true
                 checked: root.viewMode === "current"
                 Accessible.name: "当前"
                 onClicked: root.viewMode = "current"
-                contentItem: Text { text: parent.text; color: parent.checked ? "#ff9b5a" : root.mutedTextColor; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.pixelSize: 10 }
-                background: Rectangle { radius: 4; color: parent.checked ? "#241b17" : "transparent"; border.color: parent.checked ? "#6e432d" : "transparent" }
+                contentItem: Text { text: parent.text; color: parent.checked ? "#ff9b5a" : root.mutedTextColor; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.bold: parent.checked; font.pixelSize: 16 }
+                background: Rectangle { radius: 6; color: parent.checked ? "#241b17" : "transparent"; border.color: parent.checked ? "#6e432d" : "transparent" }
                 text: "当前"
             }
 
             ToolButton {
                 objectName: "historyTab"
-                height: 27
-                width: 52
+                height: 36
+                width: 72
                 checkable: true
                 checked: root.viewMode === "history"
                 Accessible.name: "历史"
                 onClicked: root.viewMode = "history"
-                contentItem: Text { text: parent.text; color: parent.checked ? "#ff9b5a" : root.mutedTextColor; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.pixelSize: 10 }
-                background: Rectangle { radius: 4; color: parent.checked ? "#241b17" : "transparent"; border.color: parent.checked ? "#6e432d" : "transparent" }
+                contentItem: Text { text: parent.text; color: parent.checked ? "#ff9b5a" : root.mutedTextColor; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.bold: parent.checked; font.pixelSize: 16 }
+                background: Rectangle { radius: 6; color: parent.checked ? "#241b17" : "transparent"; border.color: parent.checked ? "#6e432d" : "transparent" }
                 text: "历史"
             }
 
             ToolButton {
-                height: 27
-                width: 52
+                height: 36
+                width: 72
                 checkable: true
                 checked: root.viewMode === "favorites"
                 Accessible.name: "收藏"
                 onClicked: root.viewMode = "favorites"
-                contentItem: Text { text: parent.text; color: parent.checked ? "#ff9b5a" : root.mutedTextColor; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.pixelSize: 10 }
-                background: Rectangle { radius: 4; color: parent.checked ? "#241b17" : "transparent"; border.color: parent.checked ? "#6e432d" : "transparent" }
+                contentItem: Text { text: parent.text; color: parent.checked ? "#ff9b5a" : root.mutedTextColor; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.bold: parent.checked; font.pixelSize: 16 }
+                background: Rectangle { radius: 6; color: parent.checked ? "#241b17" : "transparent"; border.color: parent.checked ? "#6e432d" : "transparent" }
                 text: "收藏"
             }
         }
@@ -152,7 +179,7 @@ Rectangle {
 
         Item {
             width: parent.width
-            height: Math.max(0, parent.height - 168)
+            height: Math.max(0, parent.height - 192)
 
             ListView {
                 id: roomList
@@ -199,11 +226,11 @@ Rectangle {
 
                     Rectangle {
                         id: avatar
-                        x: 6
+                        x: 8
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 32
-                        height: 32
-                        radius: 16
+                        width: 48
+                        height: 48
+                        radius: 24
                         color: primary ? Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.18) : Theme.well
                         Image {
                             id: roomAvatarImage
@@ -223,17 +250,17 @@ Rectangle {
                             text: roomRow.anchorName.length > 0 ? roomRow.anchorName.slice(0, 1) : roomRow.roomId.slice(0, 1)
                             color: root.textColor
                             font.bold: true
-                            font.pixelSize: 12
+                            font.pixelSize: 22
                         }
                     }
 
                     Column {
                         anchors.left: avatar.right
-                        anchors.leftMargin: 7
+                        anchors.leftMargin: 10
                         anchors.right: roomActionBar.left
                         anchors.rightMargin: 6
                         anchors.verticalCenter: parent.verticalCenter
-                        spacing: 2
+                        spacing: 4
 
                         Text {
                             objectName: "sidebarRoomAnchorName"
@@ -242,7 +269,7 @@ Rectangle {
                             text: roomRow.anchorName.trim().length > 0 ? roomRow.anchorName : roomRow.roomId
                             elide: Text.ElideRight
                             font.bold: true
-                            font.pixelSize: 11
+                            font.pixelSize: 24
                         }
                         Text {
                             objectName: "sidebarRoomTitle"
@@ -250,16 +277,16 @@ Rectangle {
                             color: root.mutedTextColor
                             text: roomRow.title.trim().length > 0 ? roomRow.title : "斗鱼直播间"
                             elide: Text.ElideRight
-                            font.pixelSize: 9
+                            font.pixelSize: 18
                         }
                         Row {
-                            spacing: 4
+                            spacing: 6
 
                             Rectangle {
                                 anchors.verticalCenter: parent.verticalCenter
-                                width: 5
-                                height: 5
-                                radius: 3
+                                width: 8
+                                height: 8
+                                radius: 4
                                 color: roomRow.liveState === "online"
                                        ? Theme.online
                                        : (roomRow.liveState === "unknown" ? Theme.warning : Theme.mutedText)
@@ -271,7 +298,7 @@ Rectangle {
                                 text: roomRow.liveState === "online"
                                       ? "直播中"
                                       : (roomRow.liveState === "unknown" ? "检查中" : "未开播")
-                                font.pixelSize: 9
+                                font.pixelSize: 16
                             }
                         }
                     }
@@ -280,48 +307,48 @@ Rectangle {
                         id: roomActionBar
                         objectName: "sidebarRoomActionBar"
                         anchors.right: parent.right
-                        anchors.rightMargin: 4
+                        anchors.rightMargin: 6
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 119
-                        height: 23
-                        spacing: 1
+                        width: 140
+                        height: 28
+                        spacing: 2
                         ToolButton {
-                        width: 23; height: 23
+                        width: 28; height: 28
                         Accessible.name: favorite ? "取消收藏" : "收藏"
                         ToolTip.visible: hovered; ToolTip.text: Accessible.name
                         onClicked: if (root.controller) root.controller.setFavorite(roomRow.roomId, !roomRow.favorite)
                         contentItem: Image {
                             objectName: "roomFavoriteIcon"
                             anchors.centerIn: parent
-                            width: 15
-                            height: 15
+                            width: 16
+                            height: 16
                             source: Qt.resolvedUrl("../assets/icons/star.svg")
                             opacity: roomRow.favorite ? 1 : 0.55
                         }
-                        background: Rectangle { radius: 3; color: parent.hovered ? "#2a211c" : "transparent" }
+                        background: Rectangle { radius: 4; color: parent.hovered ? "#2a211c" : "transparent" }
                     }
                     ToolButton {
                         objectName: "moveRoomUpButton"
-                        width: 23; height: 23
+                        width: 28; height: 28
                         enabled: index > 0
                         Accessible.name: "上移"
                         ToolTip.visible: hovered; ToolTip.text: Accessible.name
                         onClicked: if (root.controller) root.controller.moveRoom(roomRow.roomId, -1)
-                        contentItem: Image { anchors.centerIn: parent; width: 15; height: 15; source: Qt.resolvedUrl("../assets/icons/chevron-up.svg") }
-                        background: Rectangle { radius: 3; color: parent.hovered ? "#252c34" : "transparent" }
+                        contentItem: Image { anchors.centerIn: parent; width: 16; height: 16; source: Qt.resolvedUrl("../assets/icons/chevron-up.svg") }
+                        background: Rectangle { radius: 4; color: parent.hovered ? "#252c34" : "transparent" }
                     }
                     ToolButton {
                         objectName: "moveRoomDownButton"
-                        width: 23; height: 23
+                        width: 28; height: 28
                         enabled: index < roomList.count - 1
                         Accessible.name: "下移"
                         ToolTip.visible: hovered; ToolTip.text: Accessible.name
                         onClicked: if (root.controller) root.controller.moveRoom(roomRow.roomId, 1)
-                        contentItem: Image { anchors.centerIn: parent; width: 15; height: 15; source: Qt.resolvedUrl("../assets/icons/chevron-down.svg") }
-                        background: Rectangle { radius: 3; color: parent.hovered ? "#252c34" : "transparent" }
+                        contentItem: Image { anchors.centerIn: parent; width: 16; height: 16; source: Qt.resolvedUrl("../assets/icons/chevron-down.svg") }
+                        background: Rectangle { radius: 4; color: parent.hovered ? "#252c34" : "transparent" }
                     }
                     ToolButton {
-                        width: 23; height: 23
+                        width: 28; height: 28
                         Accessible.name: root.workspaceModel && root.workspaceModel.audioMode === "multi"
                                          ? (audioFocused ? "静音直播间" : "取消直播间静音")
                                          : (audioFocused ? "关闭声音焦点" : "播放声音")
@@ -334,16 +361,16 @@ Rectangle {
                                 root.controller.setAudioRoom(roomRow.audioFocused ? "" : roomRow.roomId)
                             }
                         }
-                        contentItem: Image { anchors.centerIn: parent; width: 15; height: 15; source: Qt.resolvedUrl("../assets/icons/volume-2.svg"); opacity: audioFocused ? 1 : 0.62 }
-                        background: Rectangle { radius: 3; color: parent.hovered ? "#252c34" : "transparent" }
+                        contentItem: Image { anchors.centerIn: parent; width: 16; height: 16; source: Qt.resolvedUrl("../assets/icons/volume-2.svg"); opacity: audioFocused ? 1 : 0.62 }
+                        background: Rectangle { radius: 4; color: parent.hovered ? "#252c34" : "transparent" }
                     }
                     ToolButton {
-                        width: 23; height: 23
+                        width: 28; height: 28
                         Accessible.name: "移除房间"
                         ToolTip.visible: hovered; ToolTip.text: Accessible.name
                         onClicked: root.requestRoomRemoval(roomRow.roomId)
-                        contentItem: Image { anchors.centerIn: parent; width: 15; height: 15; source: Qt.resolvedUrl("../assets/icons/x.svg"); opacity: parent.hovered ? 1 : 0.62 }
-                        background: Rectangle { radius: 3; color: parent.hovered ? "#4b1c1c" : "transparent" }
+                        contentItem: Image { anchors.centerIn: parent; width: 16; height: 16; source: Qt.resolvedUrl("../assets/icons/x.svg"); opacity: parent.hovered ? 1 : 0.62 }
+                        background: Rectangle { radius: 4; color: parent.hovered ? "#4b1c1c" : "transparent" }
                         }
                     }
 
@@ -378,7 +405,7 @@ Rectangle {
             id: settingsButton
             objectName: "settingsButton"
             width: parent.width - 20
-            height: 38
+            height: 42
             anchors.horizontalCenter: parent.horizontalCenter
             Accessible.name: "设置"
             ToolTip.visible: hovered
@@ -387,11 +414,11 @@ Rectangle {
             contentItem: Row {
                 spacing: 8
                 anchors.fill: parent
-                anchors.leftMargin: 10
-                anchors.rightMargin: 10
+                anchors.leftMargin: 12
+                anchors.rightMargin: 12
                 Image {
-                    width: 16
-                    height: 16
+                    width: 20
+                    height: 20
                     anchors.verticalCenter: parent.verticalCenter
                     source: Qt.resolvedUrl("../assets/icons/settings.svg")
                     opacity: settingsButton.hovered ? 1 : 0.8
@@ -399,7 +426,7 @@ Rectangle {
                 Text {
                     text: "设置"
                     color: root.textColor
-                    font.pixelSize: 11
+                    font.pixelSize: 18
                     anchors.verticalCenter: parent.verticalCenter
                 }
             }

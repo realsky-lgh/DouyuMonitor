@@ -53,6 +53,7 @@ public:
     bool setFavorite(bool favorite);
     bool isAudioFocused() const noexcept;
     bool setAudioFocused(bool focused);
+    bool isRecovering() const noexcept;
     int volume() const noexcept;
     bool setVolume(int volume);
     bool attachPlayer(MpvQuickItem *player);

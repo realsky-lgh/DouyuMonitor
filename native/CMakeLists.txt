@@ -37,20 +37,31 @@ find_package(Qt6 CONFIG REQUIRED COMPONENTS
     QuickTest
 )
 
-set(MPV_ROOT "$ENV{MPV_ROOT}" CACHE PATH "libmpv SDK root")
-find_path(MPV_INCLUDE_DIR NAMES mpv/client.h PATHS "${MPV_ROOT}/include" NO_DEFAULT_PATH REQUIRED)
-find_library(MPV_LIBRARY NAMES libmpv mpv PATHS "${MPV_ROOT}" "${MPV_ROOT}/lib" NO_DEFAULT_PATH REQUIRED)
-set(MPV_RUNTIME_DLL "${MPV_ROOT}/libmpv-2.dll")
-if(NOT EXISTS "${MPV_RUNTIME_DLL}")
-    message(FATAL_ERROR "libmpv runtime DLL not found: ${MPV_RUNTIME_DLL}")
-endif()
+if(WIN32)
+    set(MPV_ROOT "$ENV{MPV_ROOT}" CACHE PATH "libmpv SDK root")
+    find_path(MPV_INCLUDE_DIR NAMES mpv/client.h PATHS "${MPV_ROOT}/include" NO_DEFAULT_PATH REQUIRED)
+    find_library(MPV_LIBRARY NAMES libmpv mpv PATHS "${MPV_ROOT}" "${MPV_ROOT}/lib" NO_DEFAULT_PATH REQUIRED)
+    set(MPV_RUNTIME_DLL "${MPV_ROOT}/libmpv-2.dll")
+    if(NOT EXISTS "${MPV_RUNTIME_DLL}")
+        message(FATAL_ERROR "libmpv runtime DLL not found: ${MPV_RUNTIME_DLL}")
+    endif()
+    # File name the runtime copy receives next to each executable.
+    set(DOUYU_MPV_RUNTIME_NAME "mpv.dll")
 
-add_library(mpv::mpv SHARED IMPORTED GLOBAL)
-set_target_properties(mpv::mpv PROPERTIES
-    IMPORTED_IMPLIB "${MPV_LIBRARY}"
-    IMPORTED_LOCATION "${MPV_RUNTIME_DLL}"
-    INTERFACE_INCLUDE_DIRECTORIES "${MPV_INCLUDE_DIR}"
-)
+    add_library(mpv::mpv SHARED IMPORTED GLOBAL)
+    set_target_properties(mpv::mpv PROPERTIES
+        IMPORTED_IMPLIB "${MPV_LIBRARY}"
+        IMPORTED_LOCATION "${MPV_RUNTIME_DLL}"
+        INTERFACE_INCLUDE_DIRECTORIES "${MPV_INCLUDE_DIR}"
+    )
+else()
+    # Linux/Unix: link against the system libmpv (e.g. Ubuntu libmpv-dev).
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(MPV REQUIRED IMPORTED_TARGET GLOBAL mpv)
+    add_library(mpv::mpv ALIAS PkgConfig::MPV)
+    find_library(MPV_RUNTIME_DLL NAMES mpv HINTS ${MPV_LIBRARY_DIRS} REQUIRED)
+    get_filename_component(DOUYU_MPV_RUNTIME_NAME "${MPV_RUNTIME_DLL}" NAME)
+endif()
 
 enable_testing()
 
@@ -75,6 +86,7 @@ set(DOUYU_QML_ICON_ASSETS
     app/qml/assets/icons/star.svg
     app/qml/assets/icons/trophy.svg
     app/qml/assets/icons/volume-2.svg
+    app/qml/assets/icons/user.svg
     app/qml/assets/icons/x.svg
     app/qml/assets/icons/window-maximize.svg
     app/qml/assets/icons/window-restore.svg
@@ -167,6 +179,7 @@ qt_add_qml_module(douyu_qml
         app/qml/pages/SettingsPage.qml
         app/qml/pages/MaoziRankPage.qml
         app/qml/dialogs/AddRoomDialog.qml
+        app/qml/dialogs/DouyuLoginDialog.qml
         app/qml/dialogs/NotificationSettingsDialog.qml
         app/qml/dialogs/CloseBehaviorDialog.qml
         app/qml/dialogs/TeamManagerDialog.qml
@@ -225,6 +238,7 @@ qt_add_resources(qml_engine_smoke_test qml_engine_test_resources
         app/qml/pages/SettingsPage.qml
         app/qml/pages/MaoziRankPage.qml
         app/qml/dialogs/AddRoomDialog.qml
+        app/qml/dialogs/DouyuLoginDialog.qml
         app/qml/dialogs/NotificationSettingsDialog.qml
         app/qml/dialogs/CloseBehaviorDialog.qml
         app/qml/dialogs/TeamManagerDialog.qml
@@ -233,7 +247,7 @@ qt_add_resources(qml_engine_smoke_test qml_engine_test_resources
 add_custom_command(TARGET qml_engine_smoke_test POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${MPV_RUNTIME_DLL}"
-        "$<TARGET_FILE_DIR:qml_engine_smoke_test>/mpv.dll"
+        "$<TARGET_FILE_DIR:qml_engine_smoke_test>/${DOUYU_MPV_RUNTIME_NAME}"
 )
 add_test(NAME qml_engine_smoke_test COMMAND qml_engine_smoke_test)
 set_property(TEST qml_engine_smoke_test PROPERTY ENVIRONMENT_MODIFICATION
@@ -293,6 +307,7 @@ qt_add_resources(qml_visual_smoke_test qml_visual_smoke_test_resources
         app/qml/pages/SettingsPage.qml
         app/qml/pages/MaoziRankPage.qml
         app/qml/dialogs/AddRoomDialog.qml
+        app/qml/dialogs/DouyuLoginDialog.qml
         app/qml/dialogs/NotificationSettingsDialog.qml
         app/qml/dialogs/CloseBehaviorDialog.qml
         app/qml/dialogs/TeamManagerDialog.qml
@@ -301,7 +316,7 @@ qt_add_resources(qml_visual_smoke_test qml_visual_smoke_test_resources
 add_custom_command(TARGET qml_visual_smoke_test POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${MPV_RUNTIME_DLL}"
-        "$<TARGET_FILE_DIR:qml_visual_smoke_test>/mpv.dll"
+        "$<TARGET_FILE_DIR:qml_visual_smoke_test>/${DOUYU_MPV_RUNTIME_NAME}"
 )
 add_test(NAME qml_visual_smoke_test COMMAND qml_visual_smoke_test)
 set_property(TEST qml_visual_smoke_test PROPERTY ENVIRONMENT_MODIFICATION
@@ -338,7 +353,7 @@ target_compile_definitions(qml_visual_regression_test PRIVATE
 add_custom_command(TARGET qml_visual_regression_test POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${MPV_RUNTIME_DLL}"
-        "$<TARGET_FILE_DIR:qml_visual_regression_test>/mpv.dll"
+        "$<TARGET_FILE_DIR:qml_visual_regression_test>/${DOUYU_MPV_RUNTIME_NAME}"
 )
 add_test(NAME qml_visual_regression_test COMMAND qml_visual_regression_test)
 set_property(TEST qml_visual_regression_test PROPERTY ENVIRONMENT_MODIFICATION
@@ -396,6 +411,7 @@ qt_add_resources(qml_interaction_test qml_interaction_test_resources
         app/qml/pages/SettingsPage.qml
         app/qml/pages/MaoziRankPage.qml
         app/qml/dialogs/AddRoomDialog.qml
+        app/qml/dialogs/DouyuLoginDialog.qml
         app/qml/dialogs/NotificationSettingsDialog.qml
         app/qml/dialogs/CloseBehaviorDialog.qml
         app/qml/dialogs/TeamManagerDialog.qml
@@ -404,7 +420,7 @@ qt_add_resources(qml_interaction_test qml_interaction_test_resources
 add_custom_command(TARGET qml_interaction_test POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${MPV_RUNTIME_DLL}"
-        "$<TARGET_FILE_DIR:qml_interaction_test>/mpv.dll"
+        "$<TARGET_FILE_DIR:qml_interaction_test>/${DOUYU_MPV_RUNTIME_NAME}"
 )
 add_test(NAME qml_interaction_test COMMAND qml_interaction_test)
 set_property(TEST qml_interaction_test PROPERTY ENVIRONMENT_MODIFICATION
@@ -484,6 +500,7 @@ qt_add_resources(qml_close_regression_test qml_close_regression_test_resources
         app/qml/pages/SettingsPage.qml
         app/qml/pages/MaoziRankPage.qml
         app/qml/dialogs/AddRoomDialog.qml
+        app/qml/dialogs/DouyuLoginDialog.qml
         app/qml/dialogs/NotificationSettingsDialog.qml
         app/qml/dialogs/CloseBehaviorDialog.qml
         app/qml/dialogs/TeamManagerDialog.qml
@@ -492,22 +509,29 @@ qt_add_resources(qml_close_regression_test qml_close_regression_test_resources
 add_custom_command(TARGET qml_close_regression_test POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${MPV_RUNTIME_DLL}"
-        "$<TARGET_FILE_DIR:qml_close_regression_test>/mpv.dll"
-    COMMAND ${CMAKE_COMMAND} -E make_directory
-        "$<TARGET_FILE_DIR:qml_close_regression_test>/platforms"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${QT_ROOT}/plugins/platforms/qoffscreen.dll"
-        "$<TARGET_FILE_DIR:qml_close_regression_test>/platforms/qoffscreen.dll"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${QT_ROOT}/plugins/platforms/qwindows.dll"
-        "$<TARGET_FILE_DIR:qml_close_regression_test>/platforms/qwindows.dll"
+        "$<TARGET_FILE_DIR:qml_close_regression_test>/${DOUYU_MPV_RUNTIME_NAME}"
 )
+if(WIN32)
+    add_custom_command(TARGET qml_close_regression_test POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+            "$<TARGET_FILE_DIR:qml_close_regression_test>/platforms"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${QT_ROOT}/plugins/platforms/qoffscreen.dll"
+            "$<TARGET_FILE_DIR:qml_close_regression_test>/platforms/qoffscreen.dll"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${QT_ROOT}/plugins/platforms/qwindows.dll"
+            "$<TARGET_FILE_DIR:qml_close_regression_test>/platforms/qwindows.dll"
+    )
+    set(DOUYU_NATIVE_QPA_PLATFORM windows)
+else()
+    set(DOUYU_NATIVE_QPA_PLATFORM xcb)
+endif()
 add_test(NAME qml_close_regression_test COMMAND qml_close_regression_test)
 set_property(TEST qml_close_regression_test PROPERTY ENVIRONMENT_MODIFICATION
     "PATH=path_list_prepend:${QT_ROOT}/bin"
     "QT_PLUGIN_PATH=set:${QT_ROOT}/plugins"
     "QML2_IMPORT_PATH=set:${QT_ROOT}/qml"
-    "QT_QPA_PLATFORM=set:windows"
+    "QT_QPA_PLATFORM=set:${DOUYU_NATIVE_QPA_PLATFORM}"
     "QT_QUICK_CONTROLS_STYLE=set:Basic"
     "DOUYU_PERF_ROOM_COUNT=set:${DOUYU_CAPACITY_TEST_ROOM_COUNT}"
 )
@@ -639,7 +663,7 @@ add_dependencies(app_controller_test fake_streamget_service)
 add_custom_command(TARGET app_controller_test POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${MPV_RUNTIME_DLL}"
-        "$<TARGET_FILE_DIR:app_controller_test>/mpv.dll"
+        "$<TARGET_FILE_DIR:app_controller_test>/${DOUYU_MPV_RUNTIME_NAME}"
 )
 add_test(NAME app_controller_test COMMAND app_controller_test)
 set_property(TEST app_controller_test PROPERTY ENVIRONMENT_MODIFICATION
@@ -666,7 +690,7 @@ target_compile_definitions(mpv_quick_item_test PRIVATE DOUYU_TESTING)
 add_custom_command(TARGET mpv_quick_item_test POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${MPV_RUNTIME_DLL}"
-        "$<TARGET_FILE_DIR:mpv_quick_item_test>/mpv.dll"
+        "$<TARGET_FILE_DIR:mpv_quick_item_test>/${DOUYU_MPV_RUNTIME_NAME}"
 )
 add_test(NAME mpv_quick_item_test COMMAND mpv_quick_item_test)
 set_property(TEST mpv_quick_item_test PROPERTY ENVIRONMENT_MODIFICATION
@@ -727,8 +751,10 @@ add_library(douyu_danmaku STATIC
     src/danmaku/danmaku_timer_scheduler.cpp
     src/danmaku/douyu_danmaku_client.cpp
     src/danmaku/danmaku_session_manager.cpp
+    src/danmaku/douyu_auth_service.cpp
+    src/danmaku/douyu_danmaku_sender.cpp
 )
-target_link_libraries(douyu_danmaku PUBLIC Qt6::Core Qt6::WebSockets)
+target_link_libraries(douyu_danmaku PUBLIC Qt6::Core Qt6::WebSockets Qt6::Network)
 target_include_directories(douyu_danmaku PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 add_executable(douyu_danmaku_client_test
@@ -750,6 +776,30 @@ target_link_libraries(danmaku_session_manager_test PRIVATE douyu_danmaku Qt6::Co
 target_include_directories(danmaku_session_manager_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_test(NAME danmaku_session_manager_test COMMAND danmaku_session_manager_test)
 set_tests_properties(danmaku_session_manager_test PROPERTIES
+    ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${QT_ROOT}/bin"
+)
+
+add_executable(douyu_auth_service_test
+    tests/douyu_auth_service_test.cpp
+    src/ui/qr_code_image_provider.cpp
+    src/util/qrcodegen.cpp
+    src/workspace/room_capacity.cpp
+)
+target_link_libraries(douyu_auth_service_test PRIVATE douyu_danmaku Qt6::Core Qt6::Quick Qt6::Test)
+target_include_directories(douyu_auth_service_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+add_test(NAME douyu_auth_service_test COMMAND douyu_auth_service_test)
+set_tests_properties(douyu_auth_service_test PROPERTIES
+    ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${QT_ROOT}/bin"
+)
+
+add_executable(douyu_danmaku_sender_test
+    tests/douyu_danmaku_sender_test.cpp
+    src/workspace/room_capacity.cpp
+)
+target_link_libraries(douyu_danmaku_sender_test PRIVATE douyu_danmaku Qt6::Core Qt6::Test)
+target_include_directories(douyu_danmaku_sender_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+add_test(NAME douyu_danmaku_sender_test COMMAND douyu_danmaku_sender_test)
+set_tests_properties(douyu_danmaku_sender_test PROPERTIES
     ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${QT_ROOT}/bin"
 )
 
@@ -907,7 +957,7 @@ target_compile_definitions(room_session_test PRIVATE
 add_custom_command(TARGET room_session_test POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${MPV_RUNTIME_DLL}"
-        "$<TARGET_FILE_DIR:room_session_test>/mpv.dll"
+        "$<TARGET_FILE_DIR:room_session_test>/${DOUYU_MPV_RUNTIME_NAME}"
 )
 add_test(NAME room_session_test COMMAND room_session_test)
 set_property(TEST room_session_test PROPERTY ENVIRONMENT_MODIFICATION
@@ -943,7 +993,7 @@ target_compile_definitions(multi_room_coordinator_test PRIVATE
 add_custom_command(TARGET multi_room_coordinator_test POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${MPV_RUNTIME_DLL}"
-        "$<TARGET_FILE_DIR:multi_room_coordinator_test>/mpv.dll"
+        "$<TARGET_FILE_DIR:multi_room_coordinator_test>/${DOUYU_MPV_RUNTIME_NAME}"
 )
 add_test(NAME multi_room_coordinator_test COMMAND multi_room_coordinator_test)
 set_property(TEST multi_room_coordinator_test PROPERTY ENVIRONMENT_MODIFICATION
@@ -1025,20 +1075,23 @@ add_executable(douyu_monitor_native
     src/ui/room_list_model.cpp
     src/ui/workspace_model.cpp
     src/ui/monitoring_model.cpp
+    src/ui/qr_code_image_provider.cpp
+    src/util/qrcodegen.cpp
 )
 
 set_target_properties(douyu_monitor_native PROPERTIES
     WIN32_EXECUTABLE TRUE
 )
 
+qt_add_resources(douyu_monitor_native native_app_icon
+    PREFIX "/app"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}"
+    FILES
+        app/assets/douyu_monitor.ico
+)
+
 if(WIN32)
     target_sources(douyu_monitor_native PRIVATE app/resources/app_icon.rc)
-    qt_add_resources(douyu_monitor_native native_app_icon
-        PREFIX "/app"
-        BASE "${CMAKE_CURRENT_SOURCE_DIR}"
-        FILES
-            app/assets/douyu_monitor.ico
-    )
 
     add_executable(douyu_monitor_uninstaller WIN32
         app/uninstaller_main.cpp
@@ -1081,7 +1134,7 @@ endif()
 add_custom_command(TARGET douyu_monitor_native POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${MPV_RUNTIME_DLL}"
-        "$<TARGET_FILE_DIR:douyu_monitor_native>/mpv.dll"
+        "$<TARGET_FILE_DIR:douyu_monitor_native>/${DOUYU_MPV_RUNTIME_NAME}"
     COMMAND "${CMAKE_COMMAND}"
         -DSERVICE_SOURCE:PATH=${CMAKE_CURRENT_SOURCE_DIR}/out/service/streamget_service
         -DSERVICE_DEST:PATH=$<TARGET_FILE_DIR:douyu_monitor_native>
@@ -1145,7 +1198,7 @@ target_link_libraries(mpv_dependency_probe PRIVATE mpv::mpv)
 add_custom_command(TARGET mpv_dependency_probe POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${MPV_RUNTIME_DLL}"
-        "$<TARGET_FILE_DIR:mpv_dependency_probe>/mpv.dll"
+        "$<TARGET_FILE_DIR:mpv_dependency_probe>/${DOUYU_MPV_RUNTIME_NAME}"
 )
 add_test(NAME mpv_dependency_probe COMMAND mpv_dependency_probe)
 

@@ -208,6 +208,11 @@ bool RoomSession::setAudioFocused(bool focused)
     return true;
 }
 
+bool RoomSession::isRecovering() const noexcept
+{
+    return recoveringPlayback_;
+}
+
 int RoomSession::volume() const noexcept
 {
     return volume_;

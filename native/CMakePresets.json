@@ -31,6 +31,20 @@
       "cacheVariables": {
         "DOUYU_ROOM_CAPACITY_PHASE24": "ON"
       }
+    },
+    {
+      "name": "linux-x64-release",
+      "displayName": "Linux x64 Release (system Qt 6 + libmpv)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/linux-x64-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
     }
   ],
   "buildPresets": [
@@ -45,6 +59,10 @@
     {
       "name": "windows-x64-beta24",
       "configurePreset": "windows-x64-beta24"
+    },
+    {
+      "name": "linux-x64-release",
+      "configurePreset": "linux-x64-release"
     }
   ],
   "testPresets": [
@@ -65,6 +83,13 @@
     {
       "name": "windows-x64-beta24",
       "configurePreset": "windows-x64-beta24",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "linux-x64-release",
+      "configurePreset": "linux-x64-release",
       "output": {
         "outputOnFailure": true
       }

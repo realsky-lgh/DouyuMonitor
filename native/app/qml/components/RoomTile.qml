@@ -34,7 +34,8 @@ FocusScope {
     required property int index
     required property var availableQualities
     property var controller: null
-    signal fullScreenToggleRequested()
+    property bool isMaximized: false
+    signal fullScreenToggleRequested(string roomId)
     property color borderColor: Theme.border
     property color accentColor: Theme.accent
     property color textColor: Theme.text
@@ -89,7 +90,7 @@ FocusScope {
         interval: 2200
         repeat: false
         onTriggered: {
-            if (root.menuOpen || qualityBox.popup.visible || roomVolumeSlider.pressed) restart()
+            if (root.menuOpen || qualityBox.popup.visible || roomVolumeSlider.pressed || danmakuTextField.activeFocus) restart()
             else root.controlsVisible = false
         }
     }
@@ -149,6 +150,7 @@ FocusScope {
         }
 
         DanmakuOverlay {
+            id: roomDanmakuOverlay
             anchors.fill: parent
             roomId: root.roomId
             controller: root.controller ? root.controller.danmaku : null
@@ -201,7 +203,7 @@ FocusScope {
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.right: parent.right
-            height: root.dense ? 28 : root.compact ? 32 : 36
+            height: root.dense ? 32 : root.compact ? 36 : 42
             z: 100
             color: Qt.rgba(Theme.appBar.r, Theme.appBar.g, Theme.appBar.b, 0.88)
             opacity: root.controlsVisible ? 1 : 0
@@ -220,8 +222,8 @@ FocusScope {
                     id: liveStatusBadge
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
-                    height: root.dense ? 17 : 19
-                    width: statusLabel.width + (root.dense ? 8 : 12)
+                    height: root.dense ? 20 : 23
+                    width: statusLabel.width + (root.dense ? 10 : 14)
                     radius: Theme.radiusSmall
                     color: root.liveState === "online"
                            ? Qt.rgba(Theme.online.r, Theme.online.g, Theme.online.b, 0.14)
@@ -241,7 +243,7 @@ FocusScope {
                                ? Theme.online
                                : (root.liveState === "offline" ? Theme.danger : Theme.mutedText)
                         font.bold: true
-                        font.pixelSize: root.dense ? 8 : 9
+                        font.pixelSize: root.dense ? 10 : 12
                         text: root.liveState === "online" ? "直播中" : root.liveState === "offline" ? "未开播" : "检查中"
                     }
                 }
@@ -258,8 +260,8 @@ FocusScope {
                     anchors.leftMargin: visible ? 6 : 0
                     anchors.verticalCenter: parent.verticalCenter
                     visible: root.primary || root.secondaryPrimary
-                    width: visible ? primaryRoomLabel.width + (root.dense ? 8 : 12) : 0
-                    height: root.dense ? 17 : 19
+                    width: visible ? primaryRoomLabel.width + (root.dense ? 10 : 14) : 0
+                    height: root.dense ? 20 : 23
                     radius: Theme.radiusSmall
                     color: Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.16)
                     border.color: Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.52)
@@ -268,7 +270,7 @@ FocusScope {
                         anchors.centerIn: parent
                         color: root.accentColor
                         font.bold: true
-                        font.pixelSize: root.dense ? 8 : 9
+                        font.pixelSize: root.dense ? 10 : 12
                         text: primaryRoomBadge.text
                     }
                 }
@@ -276,14 +278,14 @@ FocusScope {
                 Text {
                     id: categoryLabel
                     anchors.left: (root.primary || root.secondaryPrimary) ? primaryRoomBadge.right : liveStatusBadge.right
-                    anchors.leftMargin: 7
+                    anchors.leftMargin: 8
                     anchors.right: viewerLabel.left
-                    anchors.rightMargin: 7
+                    anchors.rightMargin: 8
                     anchors.verticalCenter: parent.verticalCenter
                     visible: !root.compact && !root.dense
                     color: Theme.text
                     elide: Text.ElideRight
-                    font.pixelSize: 10
+                    font.pixelSize: 12
                     text: root.displayCategory
                 }
                 Text {
@@ -300,7 +302,7 @@ FocusScope {
                     color: Theme.text
                     elide: Text.ElideRight
                     font.bold: true
-                    font.pixelSize: 9
+                    font.pixelSize: 11
                     text: root.displayAnchorName
                 }
                 Text {
@@ -309,10 +311,10 @@ FocusScope {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     visible: !root.compact && !root.dense
-                    width: 74
+                    width: 86
                     color: Theme.mutedText
                     elide: Text.ElideRight
-                    font.pixelSize: 9
+                    font.pixelSize: 11
                     horizontalAlignment: Text.AlignRight
                     text: "热度 " + root.displayViewerLabel
                 }
@@ -341,59 +343,214 @@ FocusScope {
             parent: root
             visible: root.menuOpen
             z: 110
-            width: 172
-            height: 156
+            width: 196
+            height: menuColumn.implicitHeight + 16
             anchors.top: topBar.bottom
             anchors.right: parent.right
-            anchors.margins: 7
-            radius: 6
+            anchors.margins: 8
+            radius: Theme.radiusMedium
             color: "#141a21"
             border.color: root.borderColor
 
             Column {
+                id: menuColumn
                 anchors.fill: parent
-                anchors.margins: 6
-                spacing: 2
-                Text { width: parent.width; height: 27; verticalAlignment: Text.AlignVCenter; color: root.mutedTextColor; font.pixelSize: 10; elide: Text.ElideRight; text: root.playbackState === "error" ? "播放状态异常" : "播放状态正常" }
+                anchors.margins: 8
+                spacing: 3
+                Text { width: parent.width; height: 30; verticalAlignment: Text.AlignVCenter; color: root.mutedTextColor; font.pixelSize: 12; elide: Text.ElideRight; text: root.playbackState === "error" ? "播放状态异常" : "播放状态正常" }
+                ToolButton {
+                    objectName: "toggleMaximizeRoomAction"
+                    width: parent.width; height: 32
+                    Accessible.name: root.isMaximized ? "恢复宫格" : "充满窗口"
+                    ToolTip.visible: hovered; ToolTip.text: Accessible.name
+                    onClicked: { root.menuOpen = false; root.fullScreenToggleRequested(root.roomId) }
+                    contentItem: Text { text: root.isMaximized ? "恢复宫格 (双击)" : "充满窗口 (双击)"; color: "#d6dde5"; leftPadding: 8; verticalAlignment: Text.AlignVCenter; font.pixelSize: 13 }
+                    background: Rectangle { radius: 5; color: parent.hovered ? "#241b17" : "transparent" }
+                }
                 ToolButton {
                     objectName: "refreshRoomAction"
-                    width: parent.width; height: 27
+                    width: parent.width; height: 32
                     Accessible.name: "刷新房间数据"
                     ToolTip.visible: hovered; ToolTip.text: Accessible.name
                     onClicked: { if (root.controller) root.controller.refreshRoom(root.roomId); root.menuOpen = false }
-                    contentItem: Text { text: "刷新房间数据"; color: "#d6dde5"; leftPadding: 6; verticalAlignment: Text.AlignVCenter; font.pixelSize: 10 }
-                    background: Rectangle { radius: 4; color: parent.hovered ? "#241b17" : "transparent" }
+                    contentItem: Text { text: "刷新房间数据"; color: "#d6dde5"; leftPadding: 8; verticalAlignment: Text.AlignVCenter; font.pixelSize: 13 }
+                    background: Rectangle { radius: 5; color: parent.hovered ? "#241b17" : "transparent" }
                 }
                 ToolButton {
                     visible: !!(root.controller && root.controller.workspace
                                 && root.controller.workspace.layoutMode === "primary-two")
-                    width: parent.width; height: 27
+                    width: parent.width; height: 32
                     Accessible.name: root.secondaryPrimary ? "当前主画面 2" : "设为主画面 2"
                     onClicked: { if (root.controller) root.controller.setSecondaryPrimaryRoom(root.roomId); root.menuOpen = false }
-                    contentItem: Text { text: root.secondaryPrimary ? "当前主画面 2" : "设为主画面 2"; color: "#d6dde5"; leftPadding: 6; verticalAlignment: Text.AlignVCenter; font.pixelSize: 10 }
-                    background: Rectangle { radius: 4; color: parent.hovered ? "#241b17" : "transparent" }
+                    contentItem: Text { text: root.secondaryPrimary ? "当前主画面 2" : "设为主画面 2"; color: "#d6dde5"; leftPadding: 8; verticalAlignment: Text.AlignVCenter; font.pixelSize: 13 }
+                    background: Rectangle { radius: 5; color: parent.hovered ? "#241b17" : "transparent" }
                 }
                 ToolButton {
-                    width: parent.width; height: 27
+                    width: parent.width; height: 32
                     Accessible.name: "重新检查播放源"
                     onClicked: { if (root.controller) root.controller.retryPlayback(root.roomId); root.menuOpen = false }
-                    contentItem: Text { text: "重新检查播放源"; color: "#d6dde5"; leftPadding: 6; verticalAlignment: Text.AlignVCenter; font.pixelSize: 10 }
-                    background: Rectangle { radius: 4; color: parent.hovered ? "#241b17" : "transparent" }
+                    contentItem: Text { text: "重新检查播放源"; color: "#d6dde5"; leftPadding: 8; verticalAlignment: Text.AlignVCenter; font.pixelSize: 13 }
+                    background: Rectangle { radius: 5; color: parent.hovered ? "#241b17" : "transparent" }
                 }
                 ToolButton {
-                    width: parent.width; height: 27
+                    width: parent.width; height: 32
                     Accessible.name: root.primary ? "当前主画面 1" : "设为主画面 1"
                     onClicked: { if (root.controller) root.controller.setPrimaryRoom(root.roomId); root.menuOpen = false }
-                    contentItem: Text { text: root.controller && root.controller.workspace && root.controller.workspace.layoutMode === "primary-two" ? (root.primary ? "当前主画面 1" : "设为主画面 1") : (root.primary ? "当前主画面" : "设为主画面"); color: "#d6dde5"; leftPadding: 6; verticalAlignment: Text.AlignVCenter; font.pixelSize: 10 }
-                    background: Rectangle { radius: 4; color: parent.hovered ? "#241b17" : "transparent" }
+                    contentItem: Text { text: root.controller && root.controller.workspace && root.controller.workspace.layoutMode === "primary-two" ? (root.primary ? "当前主画面 1" : "设为主画面 1") : (root.primary ? "当前主画面" : "设为主画面"); color: "#d6dde5"; leftPadding: 8; verticalAlignment: Text.AlignVCenter; font.pixelSize: 13 }
+                    background: Rectangle { radius: 5; color: parent.hovered ? "#241b17" : "transparent" }
                 }
                 ToolButton {
-                    width: parent.width; height: 27
+                    width: parent.width; height: 32
                     Accessible.name: "移除房间"
                     onClicked: { root.menuOpen = false; root.requestRoomRemoval(root.roomId) }
-                    contentItem: Text { text: "移除房间"; color: parent.hovered ? "#ff9b92" : "#d6dde5"; leftPadding: 6; verticalAlignment: Text.AlignVCenter; font.pixelSize: 10 }
-                    background: Rectangle { radius: 4; color: parent.hovered ? "#4b1c1c" : "transparent" }
+                    contentItem: Text { text: "移除房间"; color: parent.hovered ? "#ff9b92" : "#d6dde5"; leftPadding: 8; verticalAlignment: Text.AlignVCenter; font.pixelSize: 13 }
+                    background: Rectangle { radius: 5; color: parent.hovered ? "#4b1c1c" : "transparent" }
                 }
+            }
+        }
+
+        Rectangle {
+            id: danmakuInputBar
+            objectName: "danmakuInputBar"
+            parent: root
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: (bottomBar.visible ? bottomBar.height : 0) + 6
+            anchors.left: parent.left
+            anchors.leftMargin: 8
+            anchors.right: parent.right
+            anchors.rightMargin: 8
+            height: root.compact ? 36 : 40
+            z: 100
+            visible: !root.dense
+            opacity: (root.controlsVisible || danmakuTextField.activeFocus || danmakuInputHoverHandler.hovered) ? 1 : 0
+            radius: Theme.radiusSmall
+            color: Qt.rgba(0.08, 0.11, 0.16, 0.94)
+            border.color: danmakuTextField.activeFocus ? Theme.accent : Theme.border
+            border.width: 1
+
+            Behavior on opacity { NumberAnimation { duration: 150 } }
+
+            HoverHandler {
+                id: danmakuInputHoverHandler
+                onHoveredChanged: if (hovered) root.revealControls()
+            }
+
+            Row {
+                anchors.fill: parent
+                anchors.margins: 3
+                spacing: 6
+
+                TextField {
+                    id: danmakuTextField
+                    objectName: "roomDanmakuInput"
+                    width: parent.width - sendDanmakuButton.width - parent.spacing
+                    height: parent.height
+                    verticalAlignment: Text.AlignVCenter
+                    placeholderText: (root.controller && root.controller.isLoggedIn) ? "发个弹幕吧~ (按Enter发送)" : "点击登录斗鱼发弹幕"
+                    placeholderTextColor: Theme.mutedText
+                    color: Theme.text
+                    font.pixelSize: root.compact ? 13 : 15
+                    leftPadding: 10
+                    rightPadding: 10
+                    background: Item {}
+
+                    onActiveFocusChanged: {
+                        if (activeFocus) {
+                            controlsTimer.stop()
+                            if (root.controller && !root.controller.isLoggedIn) {
+                                root.controller.startQrLogin()
+                            }
+                        } else {
+                            controlsTimer.restart()
+                        }
+                    }
+
+                    onAccepted: {
+                        sendDanmakuButton.triggerSend()
+                    }
+                }
+
+                ToolButton {
+                    id: sendDanmakuButton
+                    objectName: "sendDanmakuButton"
+                    width: root.compact ? 54 : 60
+                    height: parent.height
+                    enabled: danmakuTextField.text.trim().length > 0 || (root.controller && !root.controller.isLoggedIn)
+                    onClicked: triggerSend()
+
+                    function triggerSend() {
+                        if (!root.controller) return
+                        if (!root.controller.isLoggedIn) {
+                            root.controller.startQrLogin()
+                            return
+                        }
+                        const txt = danmakuTextField.text.trim()
+                        if (txt.length === 0) return
+                        roomDanmakuOverlay.showLocalDanmaku(txt)
+                        danmakuStatusBubble.showMessage("正在发送弹幕...", "info")
+                        root.controller.sendDanmaku(root.roomId, txt)
+                        danmakuTextField.text = ""
+                    }
+
+                    contentItem: Text {
+                        text: (root.controller && root.controller.isLoggedIn) ? "发送" : "登录"
+                        color: parent.enabled ? ((root.controller && root.controller.isLoggedIn) ? Theme.accent : "#10B981") : Theme.mutedText
+                        font.pixelSize: root.compact ? 12 : 14
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    background: Rectangle {
+                        radius: Theme.radiusSmall
+                        color: parent.down ? Theme.well : (parent.hovered ? Theme.controlSurface : "transparent")
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            id: danmakuStatusBubble
+            objectName: "danmakuStatusBubble"
+            parent: root
+            anchors.bottom: danmakuInputBar.top
+            anchors.bottomMargin: 6
+            anchors.horizontalCenter: danmakuInputBar.horizontalCenter
+            width: Math.min(statusBubbleText.implicitWidth + 24, parent.width - 24)
+            height: 26
+            radius: 13
+            z: 101
+            visible: opacity > 0
+            opacity: 0
+            color: statusType === "error" ? Qt.rgba(0.9, 0.18, 0.18, 0.92) : (statusType === "success" ? Qt.rgba(0.02, 0.65, 0.38, 0.92) : Qt.rgba(0.1, 0.15, 0.22, 0.92))
+            border.color: statusType === "error" ? "#ff4d4f" : (statusType === "success" ? "#00f59b" : "#4a515a")
+            border.width: 1
+
+            property string statusType: "info"
+
+            Behavior on opacity { NumberAnimation { duration: 180 } }
+
+            Timer {
+                id: statusBubbleTimer
+                interval: 3000
+                onTriggered: danmakuStatusBubble.opacity = 0
+            }
+
+            function showMessage(msg, type) {
+                statusBubbleText.text = msg
+                statusType = type || "info"
+                opacity = 1
+                statusBubbleTimer.restart()
+            }
+
+            Text {
+                id: statusBubbleText
+                anchors.centerIn: parent
+                color: "#ffffff"
+                font.pixelSize: 12
+                font.bold: true
+                elide: Text.ElideRight
+                maximumLineCount: 1
             }
         }
 
@@ -403,7 +560,7 @@ FocusScope {
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.right: parent.right
-            height: root.dense ? 22 : root.compact ? 44 : 58
+            height: root.dense ? 26 : root.compact ? 48 : 64
             visible: !root.dense
             color: Qt.rgba(Theme.appBar.r, Theme.appBar.g, Theme.appBar.b, 0.92)
             opacity: root.controlsVisible ? 1 : 0
@@ -411,13 +568,13 @@ FocusScope {
 
             Column {
                 anchors.left: parent.left
-                anchors.leftMargin: 52
+                anchors.leftMargin: 56
                 anchors.right: tileActions.left
                 anchors.rightMargin: 10
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 3
-                Text { objectName: "roomAnchorName"; width: parent.width; color: root.textColor; elide: Text.ElideRight; font.bold: true; font.pixelSize: root.compact ? 10 : 12; text: root.displayAnchorName }
-                Text { objectName: "roomTitleText"; width: parent.width; visible: !root.compact; color: root.mutedTextColor; elide: Text.ElideRight; font.pixelSize: 9; text: root.displayTitle }
+                Text { objectName: "roomAnchorName"; width: parent.width; color: root.textColor; elide: Text.ElideRight; font.bold: true; font.pixelSize: root.compact ? 12 : 14; text: root.displayAnchorName }
+                Text { objectName: "roomTitleText"; width: parent.width; visible: !root.compact; color: root.mutedTextColor; elide: Text.ElideRight; font.pixelSize: 11; text: root.displayTitle }
                 Text { objectName: "roomTitle"; visible: false; text: root.displayTitle }
             }
 
@@ -426,8 +583,8 @@ FocusScope {
                 anchors.left: parent.left
                 anchors.leftMargin: 10
                 anchors.verticalCenter: parent.verticalCenter
-                width: root.compact ? 26 : 34
-                height: root.compact ? 26 : 34
+                width: root.compact ? 30 : 38
+                height: root.compact ? 30 : 38
                 radius: width / 2
                 color: root.primary ? "#3a2820" : "#28313a"
 
@@ -493,15 +650,15 @@ FocusScope {
                 }
                 ToolButton {
                     objectName: "danmakuRetryAction"
-                    width: 27; height: 27
+                    width: 32; height: 32
                     Accessible.name: root.primary ? "当前主画面" : "设为主画面"
                     ToolTip.visible: hovered; ToolTip.text: Accessible.name
                     onClicked: if (root.controller) root.controller.setPrimaryRoom(root.roomId)
-                    contentItem: Image { anchors.centerIn: parent; width: 16; height: 16; source: Qt.resolvedUrl("../assets/icons/pin.svg"); opacity: root.primary ? 1 : 0.55 }
-                    background: Rectangle { radius: 4; border.color: parent.hovered || root.primary ? "#9b572f" : "#4a515a"; color: parent.hovered ? "#2a211c" : "#10151b" }
+                    contentItem: Image { anchors.centerIn: parent; width: 18; height: 18; source: Qt.resolvedUrl("../assets/icons/pin.svg"); opacity: root.primary ? 1 : 0.55 }
+                    background: Rectangle { radius: 5; border.color: parent.hovered || root.primary ? "#9b572f" : "#4a515a"; color: parent.hovered ? "#2a211c" : "#10151b" }
                 }
                 ToolButton {
-                    width: 27; height: 27
+                    width: 32; height: 32
                     Accessible.name: root.controller && root.controller.workspace
                                      && root.controller.workspace.audioMode === "multi"
                                      ? (root.audioFocused ? "静音直播间" : "取消直播间静音")
@@ -515,11 +672,11 @@ FocusScope {
                             root.controller.setAudioRoom(root.audioFocused ? "" : root.roomId)
                         }
                     }
-                    contentItem: Image { anchors.centerIn: parent; width: 16; height: 16; source: Qt.resolvedUrl("../assets/icons/volume-2.svg"); opacity: root.audioFocused ? 1 : 0.62 }
-                    background: Rectangle { radius: 4; border.color: parent.hovered || root.audioFocused ? "#9b572f" : "#4a515a"; color: parent.hovered ? "#2a211c" : "#10151b" }
+                    contentItem: Image { anchors.centerIn: parent; width: 18; height: 18; source: Qt.resolvedUrl("../assets/icons/volume-2.svg"); opacity: root.audioFocused ? 1 : 0.62 }
+                    background: Rectangle { radius: 5; border.color: parent.hovered || root.audioFocused ? "#9b572f" : "#4a515a"; color: parent.hovered ? "#2a211c" : "#10151b" }
                 }
                 ToolButton {
-                    width: 27; height: 27
+                    width: 32; height: 32
                     Accessible.name: root.danmakuState === "failed" || root.danmakuState === "platform-blocked"
                                      ? "重试弹幕连接"
                                      : (root.danmakuState === "waiting"
@@ -541,8 +698,8 @@ FocusScope {
                     contentItem: Item {
                         Image {
                             anchors.centerIn: parent
-                            width: 16
-                            height: 16
+                            width: 18
+                            height: 18
                             source: Qt.resolvedUrl("../assets/icons/message-circle.svg")
                             opacity: root.danmakuEnabled ? 1 : 0.62
                         }
@@ -550,9 +707,9 @@ FocusScope {
                             objectName: "danmakuConnectedIndicator"
                             anchors.right: parent.right
                             anchors.top: parent.top
-                            width: 6
-                            height: 6
-                            radius: 3
+                            width: 7
+                            height: 7
+                            radius: 3.5
                             visible: root.danmakuState === "connected"
                                      || root.danmakuState === "failed"
                                      || root.danmakuState === "platform-blocked"
@@ -565,7 +722,7 @@ FocusScope {
                         }
                     }
                     background: Rectangle {
-                        radius: 4
+                        radius: 5
                         border.color: parent.hovered || root.danmakuEnabled ? "#9b572f" : "#4a515a"
                         color: parent.hovered ? "#2a211c" : "#10151b"
                     }
@@ -573,8 +730,8 @@ FocusScope {
                 ComboBox {
                     id: qualityBox
                     objectName: "roomQualitySelector"
-                    width: Math.max(82, Math.min(112, implicitContentWidth + 34))
-                    height: 27
+                    width: Math.max(90, Math.min(130, implicitContentWidth + 38))
+                    height: 32
                     model: root.qualityOptions
                     textRole: "label"
                     currentIndex: root.qualityIndex(root.requestedQuality, root.requestedQualityRate)
@@ -591,12 +748,12 @@ FocusScope {
                         Text {
                             objectName: "roomQualityLabel"
                             anchors.fill: parent
-                            leftPadding: 7
-                            rightPadding: 6
+                            leftPadding: 8
+                            rightPadding: 8
                             color: "#d7dee5"
                             text: qualityBox.displayText
                             verticalAlignment: Text.AlignVCenter
-                            font.pixelSize: 9
+                            font.pixelSize: 11
                             elide: Text.ElideNone
                         }
                     }
@@ -629,17 +786,17 @@ FocusScope {
                         required property int index
 
                         width: ListView.view.width
-                        height: 27
+                        height: 32
                         contentItem: Item {
                             Text {
                                 objectName: "roomQualityOptionLabel"
                                 anchors.fill: parent
-                                leftPadding: 7
-                                rightPadding: 7
+                                leftPadding: 8
+                                rightPadding: 8
                                 text: model[qualityBox.textRole] !== undefined
                                       ? model[qualityBox.textRole] : qualityBox.textAt(index)
                                 color: qualityOptionDelegate.highlighted ? Theme.text : "#d7dee5"
-                                font.pixelSize: 9
+                                font.pixelSize: 11
                                 elide: Text.ElideNone
                                 verticalAlignment: Text.AlignVCenter
                             }
@@ -660,11 +817,11 @@ FocusScope {
         objectName: "roomPictureDoubleClickArea"
         anchors.fill: parent
         anchors.topMargin: topBar.height
-        anchors.bottomMargin: bottomBar.visible ? bottomBar.height : 0
+        anchors.bottomMargin: bottomBar.visible ? (bottomBar.height + (danmakuInputBar.visible ? (danmakuInputBar.height + 6) : 0)) : 0
         enabled: !root.menuOpen && !qualityBox.popup.visible
                  && !pictureDoubleClickGuard.running
         acceptedButtons: Qt.LeftButton
-        onDoubleClicked: root.fullScreenToggleRequested()
+        onDoubleClicked: root.fullScreenToggleRequested(root.roomId)
     }
 
     HoverHandler {
@@ -690,5 +847,20 @@ FocusScope {
 
     onRoomIdChanged: {
         if (playerLoader.item) attachPlayerForCurrentRoom(playerLoader.item)
+    }
+
+    Connections {
+        target: root.controller
+        ignoreUnknownSignals: true
+
+        function onDanmakuSendResult(roomId, success, errorMessage) {
+            if (roomId === root.roomId) {
+                if (success) {
+                    danmakuStatusBubble.showMessage("✓ 弹幕发送成功", "success")
+                } else {
+                    danmakuStatusBubble.showMessage("✕ " + (errorMessage ? errorMessage : "发送失败"), "error")
+                }
+            }
+        }
     }
 }

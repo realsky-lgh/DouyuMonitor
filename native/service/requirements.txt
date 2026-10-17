@@ -1,1 +1,2 @@
 streamget==4.0.10
+socksio==1.0.0

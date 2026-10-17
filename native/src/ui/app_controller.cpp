@@ -19,6 +19,8 @@
 #include "app/windows_tray_service.h"
 #include "danmaku/danmaku_socket.h"
 #include "danmaku/danmaku_timer_scheduler.h"
+#include "danmaku/douyu_auth_service.h"
+#include "danmaku/douyu_danmaku_sender.h"
 #include "service/streamget_process_client.h"
 #include "ui/monitoring_model.h"
 #include "ui/mpv_quick_item.h"
@@ -261,10 +263,14 @@ AppController::AppController(QString serviceProgram,
     connect(coordinator_.get(), &MultiRoomCoordinator::roomSnapshotsChanged,
             this, &AppController::onSnapshotsChanged);
     connect(coordinator_.get(), &MultiRoomCoordinator::failed, this,
-            [this](const QString &, const QString &errorCode) {
+            [this](const QString &roomId, const QString &errorCode) {
+                const RoomSession *session = coordinator_->sessionForRoom(roomId);
+                if (session != nullptr && session->isRecovering()) {
+                    return;
+                }
                 workspace_->setLastMessage(fixedPlaybackMessage(errorCode),
                                             QStringLiteral("error"),
-                                            0);
+                                            4000);
             });
     connect(coordinator_.get(), &MultiRoomCoordinator::roomStatusRefreshed,
             this, &AppController::onRoomStatusRefreshed);
@@ -294,6 +300,26 @@ AppController::AppController(QString serviceProgram,
             this, &AppController::restoreFromBackground);
     connect(trayService_.get(), &WindowsTrayService::quitRequested,
             this, &AppController::requestQuit);
+
+    authService_ = std::make_unique<DouyuAuthService>(nullptr, this);
+    danmakuSender_ = std::make_unique<DouyuDanmakuSender>(nullptr, this);
+
+    connect(authService_.get(), &DouyuAuthService::qrStateChanged, this,
+            [this](DouyuQrLoginState state, const QString &qrUrl, const QString &statusText) {
+        qrLoginState_ = static_cast<int>(state);
+        qrLoginUrl_ = qrUrl;
+        qrLoginStatusText_ = statusText;
+        emit qrLoginStateChanged();
+    });
+    connect(authService_.get(), &DouyuAuthService::loginStateChanged, this, [this] {
+        emit authChanged();
+    });
+    connect(authService_.get(), &DouyuAuthService::userProfileChanged, this, [this] {
+        emit authChanged();
+    });
+    connect(danmakuSender_.get(), &DouyuDanmakuSender::danmakuSent, this, &AppController::danmakuSendResult);
+
+    authService_->loadSession();
 }
 
 AppController::~AppController()
@@ -654,8 +680,20 @@ bool AppController::quitRequested() const noexcept
     return quitRequested_;
 }
 
-QString AppController::fixedPlaybackMessage(const QString &) const
+QString AppController::fixedPlaybackMessage(const QString &errorCode) const
 {
+    if (errorCode == QStringLiteral("STREAMGET_UNAVAILABLE")
+        || errorCode == QStringLiteral("SERVICE_FAILED")) {
+        return QStringLiteral("解析服务不可用，请稍后重试");
+    }
+    if (errorCode == QStringLiteral("TIMEOUT")) {
+        return QStringLiteral("获取播放源超时，请稍后重试");
+    }
+    if (errorCode == QStringLiteral("PLAYER_FAILED")
+        || errorCode == QStringLiteral("LOAD_FAILED")
+        || errorCode == QStringLiteral("PLAYBACK_STALLED")) {
+        return QStringLiteral("播放器加载失败，已暂停播放");
+    }
     return QStringLiteral("播放地址不可用");
 }
 
@@ -906,8 +944,14 @@ QString AppController::setFavorite(const QString &roomId, bool favorite)
         record->favorite = favorite;
         if (favorite) {
             const qint64 now = QDateTime::currentMSecsSinceEpoch();
+            qint64 maxOrder = now;
+            for (const NativeRoomRecord &candidate : snapshot_.library) {
+                if (candidate.favorite && candidate.favoriteSortOrder >= maxOrder) {
+                    maxOrder = candidate.favoriteSortOrder + 1;
+                }
+            }
             record->favoriteAddedAtMs = now;
-            record->favoriteSortOrder = now;
+            record->favoriteSortOrder = maxOrder;
         } else {
             record->favoriteAddedAtMs = 0;
             record->favoriteSortOrder = 0;
@@ -1524,6 +1568,12 @@ void AppController::restoreFromMinimized()
     mainWindow_->requestActivate();
 }
 
+bool AppController::startSystemResize(int edge)
+{
+    if (mainWindow_.isNull()) return false;
+    return mainWindow_->startSystemResize(static_cast<Qt::Edges>(edge));
+}
+
 void AppController::toggleMaximizedWindow()
 {
     if (mainWindow_.isNull()) return;
@@ -2027,4 +2077,71 @@ bool AppController::isValidQuality(int quality) noexcept
 bool AppController::isValidName(const QString &name) noexcept
 {
     return !name.trimmed().isEmpty() && name.trimmed().size() <= 30;
+}
+
+bool AppController::isLoggedIn() const noexcept
+{
+    return authService_ && authService_->isLoggedIn();
+}
+
+QString AppController::loginNickname() const
+{
+    return authService_ ? authService_->nickname() : QString();
+}
+
+QString AppController::loginAvatarUrl() const
+{
+    return authService_ ? authService_->avatarUrl() : QString();
+}
+
+QString AppController::loginUid() const
+{
+    return authService_ ? authService_->uid() : QString();
+}
+
+int AppController::qrLoginState() const noexcept
+{
+    return qrLoginState_;
+}
+
+QString AppController::qrLoginUrl() const
+{
+    return qrLoginUrl_;
+}
+
+QString AppController::qrLoginStatusText() const
+{
+    return qrLoginStatusText_;
+}
+
+void AppController::startQrLogin()
+{
+    if (authService_) {
+        authService_->startQrLogin();
+    }
+}
+
+void AppController::cancelQrLogin()
+{
+    if (authService_) {
+        authService_->cancelQrLogin();
+    }
+}
+
+void AppController::logout()
+{
+    if (authService_) {
+        authService_->logout();
+    }
+}
+
+void AppController::sendDanmaku(const QString &roomId, const QString &content)
+{
+    if (!authService_ || !authService_->isLoggedIn()) {
+        emit danmakuSendResult(roomId, false, QStringLiteral("未登录，请先使用手机斗鱼扫码登录"));
+        return;
+    }
+    if (danmakuSender_) {
+        danmakuSender_->sendDanmaku(roomId, content, authService_->session());
+    }
 }

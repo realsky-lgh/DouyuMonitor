@@ -12,6 +12,7 @@
 #include <QQuickWindow>
 #include <QQuickStyle>
 #include <QSGRendererInterface>
+#include <QSurfaceFormat>
 #include <QVariant>
 
 #include <cstdio>
@@ -19,6 +20,7 @@
 
 #include "ui/app_controller.h"
 #include "ui/mpv_quick_item.h"
+#include "ui/qr_code_image_provider.h"
 #include "app/application_logger.h"
 
 namespace {
@@ -141,11 +143,15 @@ int main(int argc, char *argv[])
     QGuiApplication application(argc, argv);
     QCoreApplication::setOrganizationName(QStringLiteral("DouyuMonitor"));
     QCoreApplication::setOrganizationDomain(QStringLiteral("douyu-monitor.local"));
-    QCoreApplication::setApplicationName(QStringLiteral("DouyuMonitor"));
+    QCoreApplication::setApplicationName(QStringLiteral("douyu_monitor_native"));
+    QGuiApplication::setDesktopFileName(QStringLiteral("douyu-monitor.desktop"));
     ApplicationLogger::install();
     QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/app/assets/douyu_monitor.ico")));
     qInfo() << "application started";
     QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
+    QSurfaceFormat format = QSurfaceFormat::defaultFormat();
+    format.setSwapInterval(1);
+    QSurfaceFormat::setDefaultFormat(format);
     QQuickStyle::setStyle(QStringLiteral("Basic"));
 
     QCommandLineParser parser;
@@ -168,14 +174,21 @@ int main(int argc, char *argv[])
     std::unique_ptr<AppController> controller;
     if (!selfTest) {
         const QDir appDir(QCoreApplication::applicationDirPath());
-        const QString bundledService = appDir.filePath(QStringLiteral("streamget_service/streamget_service.exe"));
-        const QString legacyService = appDir.filePath(QStringLiteral("streamget_service.exe"));
+#ifdef Q_OS_WIN
+        const QString serviceExecutable = QStringLiteral("streamget_service.exe");
+#else
+        const QString serviceExecutable = QStringLiteral("streamget_service");
+#endif
+        const QString bundledService =
+            appDir.filePath(QStringLiteral("streamget_service/") + serviceExecutable);
+        const QString legacyService = appDir.filePath(serviceExecutable);
         const QString serviceProgram = QFileInfo::exists(bundledService) ? bundledService : legacyService;
         controller = std::make_unique<AppController>(serviceProgram, &settings);
     }
 
     registerQmlTypes();
     QQmlApplicationEngine engine;
+    engine.addImageProvider(QStringLiteral("qrcode"), new QrCodeImageProvider());
     engine.setInitialProperties({
         {QStringLiteral("appController"),
          QVariant::fromValue(static_cast<QObject *>(controller.get()))},

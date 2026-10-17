@@ -213,12 +213,39 @@ Item {
                 height: Theme.controlHeight
                 placeholderText: "搜索主播 / 房间号"
                 color: Theme.text
+                rightPadding: clearButton.visible ? 28 : 8
                 background: Rectangle {
                     radius: Theme.radiusSmall
                     color: Theme.well
                     border.color: searchField.activeFocus ? Theme.accent : Theme.border
                 }
                 onTextChanged: root.query = text
+
+                ToolButton {
+                    id: clearButton
+                    anchors.right: parent.right
+                    anchors.rightMargin: 4
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 20
+                    height: 20
+                    visible: searchField.text.length > 0
+                    Accessible.name: "清空搜索"
+                    onClicked: {
+                        searchField.clear()
+                        searchField.forceActiveFocus()
+                    }
+                    contentItem: Image {
+                        anchors.centerIn: parent
+                        width: 12
+                        height: 12
+                        source: Qt.resolvedUrl("../assets/icons/x.svg")
+                        opacity: parent.hovered ? 1.0 : 0.6
+                    }
+                    background: Rectangle {
+                        radius: 10
+                        color: parent.hovered ? Theme.controlSurface : "transparent"
+                    }
+                }
             }
 
             ComboBox {

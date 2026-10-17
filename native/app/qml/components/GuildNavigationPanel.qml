@@ -48,6 +48,9 @@ Rectangle {
 
     function compareMembers(left, right)
     {
+        const leftOnline = left.liveState === "online" ? 1 : 0
+        const rightOnline = right.liveState === "online" ? 1 : 0
+        if (leftOnline !== rightOnline) return rightOnline - leftOnline
         const leftKey = String(left.pinyinKey || "#")
         const rightKey = String(right.pinyinKey || "#")
         const keyOrder = leftKey.localeCompare(rightKey)
@@ -346,12 +349,39 @@ Rectangle {
             placeholderText: "搜索主播或房间号"
             color: Theme.text
             placeholderTextColor: Theme.mutedText
+            rightPadding: clearButton.visible ? 26 : 8
             selectByMouse: true
             font.pixelSize: 11
             background: Rectangle {
                 radius: 4
                 color: Theme.well
                 border.color: searchInput.activeFocus ? Theme.accent : Theme.border
+            }
+
+            ToolButton {
+                id: clearButton
+                anchors.right: parent.right
+                anchors.rightMargin: 3
+                anchors.verticalCenter: parent.verticalCenter
+                width: 20
+                height: 20
+                visible: searchInput.text.length > 0
+                Accessible.name: "清空搜索"
+                onClicked: {
+                    searchInput.clear()
+                    searchInput.forceActiveFocus()
+                }
+                contentItem: Image {
+                    anchors.centerIn: parent
+                    width: 12
+                    height: 12
+                    source: Qt.resolvedUrl("../assets/icons/x.svg")
+                    opacity: parent.hovered ? 1.0 : 0.6
+                }
+                background: Rectangle {
+                    radius: 10
+                    color: parent.hovered ? Theme.controlSurface : "transparent"
+                }
             }
         }
 

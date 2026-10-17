@@ -1823,17 +1823,14 @@ void QmlInteractionTest::placesNavigationEntryAfterSidebarToggleAndBeforeBrand()
     QObject *sidebarToggle = window->findChild<QObject *>(QStringLiteral("sidebarToggleButton"));
     QObject *navigationToggle =
         window->findChild<QObject *>(QStringLiteral("hamsterNavigationButton"));
-    QObject *rankButton = window->findChild<QObject *>(QStringLiteral("maoziRankButton"));
     QObject *brandMark = window->findChild<QObject *>(QStringLiteral("brandMark"));
     QVERIFY(sidebarToggle != nullptr);
     QVERIFY(navigationToggle != nullptr);
-    QVERIFY(rankButton != nullptr);
     QVERIFY(brandMark != nullptr);
     QCOMPARE(navigationToggle->property("text").toString(),
              QStringLiteral("CSTG狼团S1导航页"));
     QVERIFY(sidebarToggle->property("x").toDouble() < navigationToggle->property("x").toDouble());
-    QVERIFY(navigationToggle->property("x").toDouble() < rankButton->property("x").toDouble());
-    QVERIFY(rankButton->property("x").toDouble() < brandMark->property("x").toDouble());
+    QVERIFY(navigationToggle->property("x").toDouble() < brandMark->property("x").toDouble());
 }
 
 void QmlInteractionTest::makesRoomListAndNavigationPanelsMutuallyExclusive()
@@ -2243,12 +2240,7 @@ void QmlInteractionTest::usesGroupedHeaderControls()
         QCOMPARE(control->property("height").toInt(), 32);
     }
     QObject *rank = header->findChild<QObject *>(QStringLiteral("maoziRankButton"));
-    QVERIFY(rank != nullptr);
-    QCOMPARE(rank->property("width").toInt(), 32);
-    QCOMPARE(rank->property("height").toInt(), 32);
-    QSignalSpy rankRequested(header.get(), SIGNAL(openMaoziRank()));
-    click(rank);
-    QCOMPARE(rankRequested.count(), 1);
+    QVERIFY(rank == nullptr);
 
     QObject *sound = header->findChild<QObject *>(QStringLiteral("soundMasterButton"));
     QObject *popover = header->findChild<QObject *>(QStringLiteral("soundMasterPopover"));
@@ -3407,9 +3399,9 @@ void QmlInteractionTest::opensMaoziRankPageFromHeader()
     window->resize(QSize(1280, 720));
     window->show();
 
-    QObject *rankButton = window->findChild<QObject *>(QStringLiteral("maoziRankButton"));
-    QVERIFY(rankButton != nullptr);
-    click(rankButton);
+    QObject *header = window->findChild<QObject *>(QStringLiteral("appHeader"));
+    QVERIFY(header != nullptr);
+    QMetaObject::invokeMethod(header, "openMaoziRank");
 
     QObject *page = window->findChild<QObject *>(QStringLiteral("maoziRankPage"));
     QVERIFY(page != nullptr);
