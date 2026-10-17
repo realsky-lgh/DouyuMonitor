@@ -5,6 +5,7 @@ on:
     tags:
       - 'v*'
       - 'V*'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -24,13 +25,17 @@ jobs:
             build-essential \
             cmake \
             ninja-build \
+            pkg-config \
+            libmpv-dev \
+            libgl1-mesa-dev \
+            libegl1-mesa-dev \
+            libxkbcommon-dev \
             qt6-base-dev \
             qt6-declarative-dev \
             qt6-websockets-dev \
             libqt6quicktemplates2-6 \
             libqt6quickcontrols2-6 \
             qml6-module-qtquick-controls \
-            libmpv-dev \
             python3-pip \
             python3-pil \
             dpkg-dev
