@@ -1,0 +1,2 @@
+b31051def0fff8de038c6b37fedef1da2682191c78e661d3d9de576f775ba94a  DouyuMonitor-0.2.20-linux-x64.tar.gz
+a92f90896177ebbae7ac3d45fcc0f3407afc3365e8c5a0a74aad1dc8306e7ba8  douyu-monitor_0.2.20_amd64.deb
