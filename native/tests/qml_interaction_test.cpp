@@ -1806,7 +1806,10 @@ void QmlInteractionTest::placesSidebarToggleBeforeBrandAndOpensHistory()
     QObject *brandMark = window->findChild<QObject *>(QStringLiteral("brandMark"));
     QVERIFY(toggle != nullptr);
     QVERIFY(brandMark != nullptr);
-    QVERIFY(toggle->property("x").toDouble() < brandMark->property("x").toDouble());
+    auto *toggleItem = qobject_cast<QQuickItem *>(toggle);
+    auto *brandItem1 = qobject_cast<QQuickItem *>(brandMark);
+    QVERIFY(toggleItem != nullptr && brandItem1 != nullptr);
+    QVERIFY(toggleItem->mapToScene(QPointF(0, 0)).x() < brandItem1->mapToScene(QPointF(0, 0)).x());
 
     click(window->findChild<QObject *>(QStringLiteral("historyTab")));
     QObject *libraryView = window->findChild<QObject *>(QStringLiteral("roomLibraryView"));
@@ -1829,8 +1832,12 @@ void QmlInteractionTest::placesNavigationEntryAfterSidebarToggleAndBeforeBrand()
     QVERIFY(brandMark != nullptr);
     QCOMPARE(navigationToggle->property("text").toString(),
              QStringLiteral("CSTG狼团S1导航页"));
-    QVERIFY(sidebarToggle->property("x").toDouble() < navigationToggle->property("x").toDouble());
-    QVERIFY(navigationToggle->property("x").toDouble() < brandMark->property("x").toDouble());
+    auto *sidebarItem = qobject_cast<QQuickItem *>(sidebarToggle);
+    auto *navItem = qobject_cast<QQuickItem *>(navigationToggle);
+    auto *brandItem = qobject_cast<QQuickItem *>(brandMark);
+    QVERIFY(sidebarItem != nullptr && navItem != nullptr && brandItem != nullptr);
+    QVERIFY(sidebarItem->mapToScene(QPointF(0, 0)).x() < navItem->mapToScene(QPointF(0, 0)).x());
+    QVERIFY(navItem->mapToScene(QPointF(0, 0)).x() < brandItem->mapToScene(QPointF(0, 0)).x());
 }
 
 void QmlInteractionTest::makesRoomListAndNavigationPanelsMutuallyExclusive()

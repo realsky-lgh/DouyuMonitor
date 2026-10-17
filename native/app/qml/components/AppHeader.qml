@@ -80,6 +80,15 @@ Rectangle {
                 color: parent.down ? Theme.well : (parent.hovered ? Theme.controlSurface : "transparent")
             }
         }
+    }
+
+    Row {
+        id: centerBrandRow
+        objectName: "centerBrandRow"
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: 8
+        z: 1
 
         Rectangle {
             objectName: "brandMark"
@@ -99,16 +108,12 @@ Rectangle {
             }
         }
 
-        Column {
+        Text {
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 1
-
-            Text {
-                color: Theme.text
-                font.bold: true
-                font.pixelSize: 16
-                text: "斗鱼多房间监控"
-            }
+            color: Theme.text
+            font.bold: true
+            font.pixelSize: 16
+            text: "斗鱼多房间监控"
         }
     }
 
