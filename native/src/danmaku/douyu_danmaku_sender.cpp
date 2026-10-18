@@ -94,17 +94,19 @@ void DouyuDanmakuSender::connectAndSend(std::shared_ptr<PendingTask> task, const
 
     connect(timer, &QTimer::timeout, this, [this, task]() {
         if (task->sentChat) {
-            // 发送了弹幕且未收到报错，正常判定为成功
-            finishTask(task, true, QString());
+            finishTask(task, false, QStringLiteral("发送弹幕超时，未收到服务器确认"));
         } else {
-            finishTask(task, false, QStringLiteral("连接弹幕网关超时"));
+            finishTask(task, false, QStringLiteral("连接弹幕网关或登录超时"));
         }
     });
     timer->start(kConnectTimeoutMs);
 
-    connect(sock, &QWebSocket::connected, this, [this, task, sock, timer]() {
+    connect(sock, &QWebSocket::connected, this, [task, sock]() {
         const qint64 ts = QDateTime::currentSecsSinceEpoch();
         QString did = task->session.cookies.value(QStringLiteral("dy_did"));
+        if (did.isEmpty()) {
+            did = task->session.cookies.value(QStringLiteral("acf_devid"));
+        }
         if (did.isEmpty()) {
             did = QStringLiteral("10000000000000000000000000001501");
         }
@@ -136,31 +138,57 @@ void DouyuDanmakuSender::connectAndSend(std::shared_ptr<PendingTask> task, const
 
         const QString loginMsg = DouyuDanmakuProtocol::serializeStt(loginFields);
         sock->sendBinaryMessage(DouyuDanmakuProtocol::encodeFrame(loginMsg));
-
-        const qint64 cst = QDateTime::currentMSecsSinceEpoch();
-        const qint64 tts = cst / 1000;
-        const QMap<QString, QString> chatFields = {
-            {QStringLiteral("type"), QStringLiteral("chatmessage")},
-            {QStringLiteral("content"), task->content},
-            {QStringLiteral("admzq"), QStringLiteral("0")},
-            {QStringLiteral("cst"), QString::number(cst)},
-            {QStringLiteral("tts"), QString::number(tts)},
-        };
-        const QString chatMsg = DouyuDanmakuProtocol::serializeStt(chatFields);
-        sock->sendBinaryMessage(DouyuDanmakuProtocol::encodeFrame(chatMsg));
-
-        task->sentChat = true;
-        // 等待稍许时间检查是否有错误帧返回
-        timer->start(kAfterSendWaitMs);
     });
 
-    connect(sock, &QWebSocket::binaryMessageReceived, this, [this, task](const QByteArray &message) {
+    connect(sock, &QWebSocket::binaryMessageReceived, this, [this, task, sock, timer](const QByteArray &message) {
         DouyuDanmakuProtocol::FrameDecoder decoder;
         const auto res = decoder.push(message);
         for (const QString &frame : res.frames) {
             const auto fields = DouyuDanmakuProtocol::parseStt(frame);
             const QString type = fields.value(QStringLiteral("type"));
-            if (type == QLatin1String("error")) {
+
+            if (type == QLatin1String("loginres")) {
+                if (!task->sentChat) {
+                    const QMap<QString, QString> joinFields = {
+                        {QStringLiteral("type"), QStringLiteral("joingroup")},
+                        {QStringLiteral("rid"), task->roomId},
+                        {QStringLiteral("gid"), QStringLiteral("-9999")}
+                    };
+                    sock->sendBinaryMessage(DouyuDanmakuProtocol::encodeFrame(DouyuDanmakuProtocol::serializeStt(joinFields)));
+
+                    const qint64 cst = QDateTime::currentMSecsSinceEpoch();
+                    const qint64 tts = cst / 1000;
+                    const QMap<QString, QString> chatFields = {
+                        {QStringLiteral("type"), QStringLiteral("chatmessage")},
+                        {QStringLiteral("receiver"), QStringLiteral("0")},
+                        {QStringLiteral("content"), task->content},
+                        {QStringLiteral("scope"), QString()},
+                        {QStringLiteral("col"), QStringLiteral("0")},
+                        {QStringLiteral("pid"), QString()},
+                        {QStringLiteral("p2p"), QStringLiteral("0")},
+                        {QStringLiteral("nc"), QStringLiteral("0")},
+                        {QStringLiteral("rev"), QStringLiteral("0")},
+                        {QStringLiteral("ifs"), QStringLiteral("0")},
+                        {QStringLiteral("admzq"), QStringLiteral("0")},
+                        {QStringLiteral("cst"), QString::number(cst)},
+                        {QStringLiteral("tts"), QString::number(tts)},
+                    };
+                    const QString chatMsg = DouyuDanmakuProtocol::serializeStt(chatFields);
+                    sock->sendBinaryMessage(DouyuDanmakuProtocol::encodeFrame(chatMsg));
+
+                    task->sentChat = true;
+                    timer->start(kAfterSendWaitMs);
+                }
+            } else if (type == QLatin1String("chatres")) {
+                const QString resVal = fields.value(QStringLiteral("res"));
+                if (resVal == QLatin1String("0")) {
+                    finishTask(task, true, QString());
+                    return;
+                } else {
+                    finishTask(task, false, QStringLiteral("发送失败（错误代码: %1）").arg(resVal));
+                    return;
+                }
+            } else if (type == QLatin1String("error")) {
                 const QString code = fields.value(QStringLiteral("code"));
                 QString msg = QStringLiteral("发送失败（错误码: %1）").arg(code);
                 if (code == QLatin1String("51")) {
@@ -186,8 +214,8 @@ void DouyuDanmakuSender::connectAndSend(std::shared_ptr<PendingTask> task, const
     });
 
     connect(sock, &QWebSocket::errorOccurred, this, [this, task](QAbstractSocket::SocketError) {
-        if (!task->sentChat) {
-            finishTask(task, false, QStringLiteral("弹幕网关网络连接失败"));
+        if (!task->finished) {
+            finishTask(task, false, QStringLiteral("弹幕网关网络连接异常"));
         }
     });
 

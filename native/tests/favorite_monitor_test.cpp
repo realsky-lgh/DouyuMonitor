@@ -44,6 +44,7 @@ private slots:
     void emitsOnlineAndTitleChangesAfterBaseline();
     void removesUnfavoritedRoomAndCancelsRequest();
     void ignoresUnknownHintsAfterOnlineBaseline();
+    void historyRoomUpdatesWithoutEmittingNotificationEvents();
 };
 
 void FavoriteMonitorTest::emitsOnlineAndTitleChangesAfterBaseline()
@@ -113,6 +114,31 @@ void FavoriteMonitorTest::ignoresUnknownHintsAfterOnlineBaseline()
     monitor.requestNow("123");
     monitor.onSearchResponse(result(3, "123", false, "Title"));
     QCOMPARE(events.count(), 1);
+}
+
+void FavoriteMonitorTest::historyRoomUpdatesWithoutEmittingNotificationEvents()
+{
+    quint64 nextRequestId = 1;
+    FavoriteMonitor monitor([&nextRequestId](const QString &) { return nextRequestId++; },
+                            [](quint64) {}, RoomRefreshTiming{60'000, 120'000, {}, 0});
+
+    FavoriteRoomSpec historyRoom = favorite("99999", RoomLiveStatus::Unknown, "历史主播");
+    historyRoom.favorite = false;
+
+    monitor.synchronize({historyRoom});
+    QSignalSpy events(&monitor, &FavoriteMonitor::eventsReady);
+    QSignalSpy updates(&monitor, &FavoriteMonitor::roomUpdated);
+
+    // Initial response sets baseline
+    monitor.onSearchResponse(result(1, "99999", false, "历史主播"));
+    QCOMPARE(updates.count(), 1);
+    QCOMPARE(events.count(), 0);
+
+    // Goes online - should emit roomUpdated but NO NotificationEvent since it's not a favorite!
+    monitor.requestNow("99999");
+    monitor.onSearchResponse(result(2, "99999", true, "历史主播直播了"));
+    QCOMPARE(updates.count(), 2);
+    QCOMPARE(events.count(), 0);
 }
 
 QTEST_GUILESS_MAIN(FavoriteMonitorTest)

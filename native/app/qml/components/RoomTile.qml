@@ -43,6 +43,7 @@ FocusScope {
     property bool menuOpen: false
     property bool controlsVisible: true
     property string attachedPlayerRoomId: ""
+    property string lastPendingDanmaku: ""
     readonly property string density: root.width >= 320
                                       ? "comfortable"
                                       : (root.width >= 180 ? "compact" : "dense")
@@ -486,7 +487,7 @@ FocusScope {
                         }
                         const txt = danmakuTextField.text.trim()
                         if (txt.length === 0) return
-                        roomDanmakuOverlay.showLocalDanmaku(txt)
+                        root.lastPendingDanmaku = txt
                         danmakuStatusBubble.showMessage("正在发送弹幕...", "info")
                         root.controller.sendDanmaku(root.roomId, txt)
                         danmakuTextField.text = ""
@@ -857,8 +858,13 @@ FocusScope {
             if (roomId === root.roomId) {
                 if (success) {
                     danmakuStatusBubble.showMessage("✓ 弹幕发送成功", "success")
+                    if (root.lastPendingDanmaku.length > 0) {
+                        roomDanmakuOverlay.showLocalDanmaku(root.lastPendingDanmaku)
+                        root.lastPendingDanmaku = ""
+                    }
                 } else {
                     danmakuStatusBubble.showMessage("✕ " + (errorMessage ? errorMessage : "发送失败"), "error")
+                    root.lastPendingDanmaku = ""
                 }
             }
         }

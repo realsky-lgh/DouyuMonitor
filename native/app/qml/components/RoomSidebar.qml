@@ -156,7 +156,10 @@ Rectangle {
                 checkable: true
                 checked: root.viewMode === "history"
                 Accessible.name: "历史"
-                onClicked: root.viewMode = "history"
+                onClicked: {
+                    root.viewMode = "history"
+                    if (root.controller) root.controller.refreshLibraryLiveStatuses()
+                }
                 contentItem: Text { text: parent.text; color: parent.checked ? "#ff9b5a" : root.mutedTextColor; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.bold: parent.checked; font.pixelSize: 16 }
                 background: Rectangle { radius: 6; color: parent.checked ? "#241b17" : "transparent"; border.color: parent.checked ? "#6e432d" : "transparent" }
                 text: "历史"
@@ -168,7 +171,10 @@ Rectangle {
                 checkable: true
                 checked: root.viewMode === "favorites"
                 Accessible.name: "收藏"
-                onClicked: root.viewMode = "favorites"
+                onClicked: {
+                    root.viewMode = "favorites"
+                    if (root.controller) root.controller.refreshLibraryLiveStatuses()
+                }
                 contentItem: Text { text: parent.text; color: parent.checked ? "#ff9b5a" : root.mutedTextColor; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.bold: parent.checked; font.pixelSize: 16 }
                 background: Rectangle { radius: 6; color: parent.checked ? "#241b17" : "transparent"; border.color: parent.checked ? "#6e432d" : "transparent" }
                 text: "收藏"

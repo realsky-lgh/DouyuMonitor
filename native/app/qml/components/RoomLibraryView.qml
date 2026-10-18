@@ -141,7 +141,7 @@ Item {
                     Text {
                         color: (entry.active || entry.online) ? Theme.online : root.mutedTextColor
                         font.pixelSize: 16
-                        text: entry.active ? "当前播放" : (entry.online ? "直播中" : root.openedLabel(entry.lastOpenedAtMs))
+                        text: entry.active ? "当前播放" : (entry.online ? "直播中" : (root.favoritesOnly ? "未开播" : ("未开播 · " + root.openedLabel(entry.lastOpenedAtMs))))
                     }
                 }
             }

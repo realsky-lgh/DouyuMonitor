@@ -128,6 +128,7 @@ public:
     QString externalUrl;
 signals:
     void workspaceSaveStateChanged();
+    void danmakuSendResult(const QString &roomId, bool success, const QString &errorMessage);
 };
 
 class FakeRoomController final : public QObject {

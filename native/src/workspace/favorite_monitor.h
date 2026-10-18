@@ -14,6 +14,7 @@ struct FavoriteRoomSpec {
     QString roomId;
     RoomMetadata metadata;
     RoomLiveStatus liveStatus = RoomLiveStatus::Unknown;
+    bool favorite = true;
 };
 
 class FavoriteMonitor final : public QObject {

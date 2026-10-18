@@ -173,6 +173,7 @@ public:
                                                    bool playbackRecovered,
                                                    bool favoriteTitleChanged = true);
     Q_INVOKABLE void refreshRoom(const QString &roomId);
+    Q_INVOKABLE void refreshLibraryLiveStatuses();
     Q_INVOKABLE void attachPlayer(const QString &roomId, MpvQuickItem *item);
     Q_INVOKABLE void detachPlayer(const QString &roomId, MpvQuickItem *item);
     Q_INVOKABLE void minimizeWindow();

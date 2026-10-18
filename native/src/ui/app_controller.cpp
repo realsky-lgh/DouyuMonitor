@@ -858,6 +858,7 @@ QString AppController::removeHistoryRoom(const QString &roomId)
     record->lastOpenedAtMs = 0;
 
     emit libraryRoomsChanged();
+    synchronizeFavoriteMonitor();
     persistWorkspace();
     return {};
 }
@@ -1822,12 +1823,23 @@ void AppController::synchronizeFavoriteMonitor()
     if (favoriteMonitor_ == nullptr) return;
     QVector<FavoriteRoomSpec> rooms;
     for (const NativeRoomRecord &record : snapshot_.library) {
-        if (!record.favorite) continue;
+        if (!record.favorite && record.lastOpenedAtMs <= 0) continue;
         rooms.push_back({record.roomId,
                          record.metadata,
-                         favoriteLiveStatuses_.value(record.roomId, RoomLiveStatus::Unknown)});
+                         favoriteLiveStatuses_.value(record.roomId, RoomLiveStatus::Unknown),
+                         record.favorite});
     }
     favoriteMonitor_->synchronize(rooms);
+}
+
+void AppController::refreshLibraryLiveStatuses()
+{
+    if (favoriteMonitor_ == nullptr) return;
+    for (const NativeRoomRecord &record : snapshot_.library) {
+        if (record.favorite || record.lastOpenedAtMs > 0) {
+            favoriteMonitor_->requestNow(record.roomId);
+        }
+    }
 }
 
 void AppController::onFavoriteRoomUpdated(const QString &roomId,
@@ -1835,7 +1847,7 @@ void AppController::onFavoriteRoomUpdated(const QString &roomId,
                                           RoomLiveStatus liveStatus)
 {
     NativeRoomRecord *record = libraryRecord(roomId);
-    if (record == nullptr || !record->favorite) return;
+    if (record == nullptr) return;
     record->metadata = metadata;
     record->metadata.roomId = roomId;
     favoriteLiveStatuses_.insert(roomId, liveStatus);
@@ -2036,6 +2048,7 @@ void AppController::touchHistory(const QString &roomId)
 
     record->lastOpenedAtMs = QDateTime::currentMSecsSinceEpoch();
     emit libraryRoomsChanged();
+    synchronizeFavoriteMonitor();
 }
 
 NativeRoomRecord *AppController::libraryRecord(const QString &roomId)

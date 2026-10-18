@@ -27,13 +27,14 @@ void FavoriteMonitor::synchronize(const QVector<FavoriteRoomSpec> &rooms)
         } else {
             states_[room.roomId].room.metadata = room.metadata;
             states_[room.roomId].room.liveStatus = room.liveStatus;
+            states_[room.roomId].room.favorite = room.favorite;
         }
 
         RoomSnapshot snapshot;
         snapshot.roomId = room.roomId;
         snapshot.metadata = room.metadata;
         snapshot.liveStatus = room.liveStatus;
-        snapshot.favorite = true;
+        snapshot.favorite = room.favorite;
         schedulerRooms.push_back(snapshot);
     }
 
@@ -96,8 +97,8 @@ void FavoriteMonitor::processResult(const QString &roomId, const RoomSearchResul
     snapshot.roomId = roomId;
     snapshot.metadata = it->room.metadata;
     snapshot.liveStatus = it->room.liveStatus;
-    snapshot.favorite = true;
-    const QVector<NotificationEvent> events = policy_.update({snapshot});
+    snapshot.favorite = it->room.favorite;
+    const QVector<NotificationEvent> events = it->room.favorite ? policy_.update({snapshot}) : QVector<NotificationEvent>{};
     it->hasBaseline = true;
     emit roomUpdated(roomId, it->room.metadata, it->room.liveStatus);
     if (!events.isEmpty()) emit eventsReady(events);
