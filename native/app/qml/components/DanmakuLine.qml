@@ -53,7 +53,6 @@ Item {
         font.bold: true
         font.hintingPreference: Font.PreferNoHinting
         renderType: Text.QtRendering
-        renderTypeQuality: Text.VeryHighRenderTypeQuality
         antialiasing: true
         smooth: true
         text: root.messageText
@@ -72,7 +71,6 @@ Item {
         font.bold: root.isSelf || root.rendering === "advanced"
         font.hintingPreference: Font.PreferNoHinting
         renderType: Text.QtRendering
-        renderTypeQuality: Text.VeryHighRenderTypeQuality
         antialiasing: true
         smooth: true
         style: Text.Outline

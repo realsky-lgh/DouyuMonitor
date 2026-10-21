@@ -140,6 +140,9 @@ int main(int argc, char *argv[])
     // Ignore test-only/headless overrides so Explorer launches remain reliable.
     qputenv("QT_QPA_PLATFORM", "windows");
 #endif
+    if (qEnvironmentVariableIsEmpty("QSG_RENDER_LOOP")) {
+        qputenv("QSG_RENDER_LOOP", "threaded");
+    }
     QGuiApplication application(argc, argv);
     QCoreApplication::setOrganizationName(QStringLiteral("DouyuMonitor"));
     QCoreApplication::setOrganizationDomain(QStringLiteral("douyu-monitor.local"));

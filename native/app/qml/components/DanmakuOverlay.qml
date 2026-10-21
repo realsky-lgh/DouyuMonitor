@@ -227,7 +227,6 @@ Item {
         }
     }
 
-    onWidthChanged: relayoutActiveItems()
     onHeightChanged: relayoutActiveItems()
     onTopInsetChanged: relayoutActiveItems()
     onBottomInsetChanged: relayoutActiveItems()

@@ -76,6 +76,10 @@ if [[ "$all_proxy" == socks://* ]]; then
     export all_proxy="socks5://${all_proxy#socks://}"
 fi
 
+if [ -z "$QSG_RENDER_LOOP" ]; then
+    export QSG_RENDER_LOOP="threaded"
+fi
+
 exec "$APP_DIR/douyu_monitor_native" "$@"
 EOF
 chmod +x "$PORTABLE_DIR/launch.sh"

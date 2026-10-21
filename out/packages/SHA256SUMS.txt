@@ -1,2 +1,2 @@
-e83bf884694bbd1170e04773bd98dc011e2800b550285f21c3797de1624270cc  DouyuMonitor-0.2.22-linux-x64.tar.gz
-a5ea884c66cd7a76955e914ce5b86cc1f062a4464ab48f536121b47b9f030369  douyu-monitor_0.2.22_amd64.deb
+af311f5530ed428db0ea7d99b9fcdd9a69295f33f2e004b190bf694e8c00aff4  DouyuMonitor-0.2.23-linux-x64.tar.gz
+562abdc43bad7f3409a400b04db9c4f4d3009ef9226aeb10149cb701cd8f3dac  douyu-monitor_0.2.23_amd64.deb
