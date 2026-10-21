@@ -24,9 +24,6 @@ Item {
     enabled: false
     z: root.isSelf ? 20 : 1
 
-    layer.enabled: true
-    layer.smooth: true
-
     signal finished()
 
     Rectangle {
@@ -54,6 +51,11 @@ Item {
         font.family: root.fontFamily
         font.pixelSize: root.fontSize
         font.bold: true
+        font.hintingPreference: Font.PreferNoHinting
+        renderType: Text.QtRendering
+        renderTypeQuality: Text.VeryHighRenderTypeQuality
+        antialiasing: true
+        smooth: true
         text: root.messageText
     }
 
@@ -68,6 +70,11 @@ Item {
         font.family: root.fontFamily
         font.pixelSize: root.fontSize
         font.bold: root.isSelf || root.rendering === "advanced"
+        font.hintingPreference: Font.PreferNoHinting
+        renderType: Text.QtRendering
+        renderTypeQuality: Text.VeryHighRenderTypeQuality
+        antialiasing: true
+        smooth: true
         style: Text.Outline
         styleColor: root.isSelf ? "#052216" : (root.rendering === "advanced" ? "#090d12" : "#1c2731")
         text: root.messageText

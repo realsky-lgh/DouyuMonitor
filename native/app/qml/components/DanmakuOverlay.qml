@@ -112,6 +112,23 @@ Item {
         clearActiveItems()
     }
 
+    function calculateSpeed(containerWidth, durationSeconds) {
+        const safeWidth = Math.max(100, Number(containerWidth || 1280))
+        const safeDuration = Math.max(1, Number(durationSeconds || 8))
+        const userFactor = 8.0 / safeDuration
+        // Sub-linear square root scaling relative to 1280px reference width
+        const baseSpeed = 160.0 * Math.sqrt(safeWidth / 1280.0)
+        // Clamp minimum speed to 120 px/s * factor to eliminate jitter/crawling in small windows
+        const minSpeed = 120.0 * userFactor
+        return Math.max(minSpeed, baseSpeed * userFactor)
+    }
+
+    function calculateDuration(containerWidth, itemWidth, durationSeconds) {
+        const speed = calculateSpeed(containerWidth, durationSeconds)
+        const totalDistance = Math.max(1, Number(containerWidth || 0)) + Math.max(1, Number(itemWidth || 0))
+        return Math.max(1, Math.round((totalDistance / speed) * 1000))
+    }
+
     function launchNextMessage() {
         if (!enabled || presentationSuspended || !controller || width <= 0 || usableHeight <= 0) return
         if (activeItems.length >= activeItemLimit) return
@@ -119,11 +136,13 @@ Item {
         if (!hasPendingMessage()) pendingMessage = controller.takeNextMessage(roomId)
         if (!hasPendingMessage()) return
 
+        const itemWidth = Math.ceil(metrics.advanceWidth) + 4
+        const itemDuration = calculateDuration(width, itemWidth, displaySettings.durationSeconds)
         const candidate = {
-            width: Math.ceil(metrics.advanceWidth) + 4,
+            width: itemWidth,
             containerWidth: width,
             launchedAt: Date.now(),
-            durationMs: durationMs,
+            durationMs: itemDuration,
             fontSize: fontSize
         }
         const lane = DanmakuLaneScheduler.selectLane(
@@ -155,11 +174,13 @@ Item {
         if (!text || text.trim().length === 0 || width <= 0 || usableHeight <= 0) return
         const trimmed = text.trim()
         localMetrics.text = trimmed
+        const itemWidth = Math.ceil(localMetrics.advanceWidth) + 24
+        const itemDuration = calculateDuration(width, itemWidth, displaySettings.durationSeconds)
         const candidate = {
-            width: Math.ceil(localMetrics.advanceWidth) + 24,
+            width: itemWidth,
             containerWidth: width,
             launchedAt: Date.now(),
-            durationMs: durationMs,
+            durationMs: itemDuration,
             fontSize: fontSize
         }
         const lanes = DanmakuLaneScheduler.lanes(usableHeight, fontSize, region, density)

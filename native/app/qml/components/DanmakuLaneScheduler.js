@@ -29,7 +29,8 @@ function canReuse(active, candidate) {
     const activeDistance = active.containerWidth + active.width
     const activeX = active.containerWidth - activeDistance * elapsed / active.durationMs
     const headGap = candidate.containerWidth - (activeX + active.width)
-    if (headGap <= 0) return false
+    const minSafetyGap = 24
+    if (headGap < minSafetyGap) return false
 
     const candidateSpeed = (candidate.containerWidth + candidate.width) / candidate.durationMs
     const activeSpeed = activeDistance / active.durationMs
