@@ -34,13 +34,11 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
 
       - name: Install Qt 6.8.2
-        uses: jurplel/install-qt-action@v3
+        uses: jurplel/install-qt-action@v4
         with:
           version: '6.8.2'
-          host: 'windows'
-          target: 'desktop'
           arch: 'win64_msvc2022_64'
-          modules: 'qtwebsockets qtsvg qtshadertools'
+          modules: 'qtsvg qtwebsockets qtshadertools'
           cache: true
 
       - name: Setup libmpv
@@ -53,6 +51,13 @@ jobs:
           Write-Host "Downloading libmpv from $mpvUrl ..."
           Invoke-WebRequest -Uri $mpvUrl -OutFile $archive -MaximumRedirection 5
           7z x $archive "-o$mpvDir" -y
+          if (-not (Test-Path "$mpvDir\libmpv-2.dll")) {
+            $childDll = Get-ChildItem -Path $mpvDir -Filter "libmpv-2.dll" -Recurse | Select-Object -First 1
+            if ($childDll) {
+              $parent = $childDll.DirectoryName
+              Copy-Item "$parent\*" $mpvDir -Recurse -Force
+            }
+          }
           if (-not (Test-Path "$mpvDir\mpv.lib")) {
             Write-Host "Generating mpv.lib from libmpv-2.dll ..."
             $def = "$mpvDir\libmpv.def"
