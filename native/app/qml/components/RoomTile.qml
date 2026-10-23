@@ -324,8 +324,8 @@ FocusScope {
             ToolButton {
                 id: roomTopActions
                 objectName: "roomTopActions"
-                anchors.right: parent.right
-                anchors.rightMargin: root.dense ? 4 : 7
+                anchors.right: closeRoomButton.left
+                anchors.rightMargin: 2
                 anchors.verticalCenter: parent.verticalCenter
                 width: root.dense ? 30 : 34
                 height: root.dense ? 24 : 28
@@ -335,6 +335,35 @@ FocusScope {
                 onClicked: { root.menuOpen = !root.menuOpen; root.revealControls() }
                 contentItem: Image { anchors.centerIn: parent; width: 16; height: 16; source: Qt.resolvedUrl("../assets/icons/ellipsis.svg") }
                 background: Rectangle { radius: Theme.radiusSmall; color: parent.hovered ? Theme.controlSurface : "transparent" }
+            }
+
+            ToolButton {
+                id: closeRoomButton
+                objectName: "closeRoomButton"
+                anchors.right: parent.right
+                anchors.rightMargin: root.dense ? 4 : 7
+                anchors.verticalCenter: parent.verticalCenter
+                width: root.dense ? 30 : 34
+                height: root.dense ? 24 : 28
+                Accessible.name: "关闭窗口"
+                ToolTip.visible: hovered
+                ToolTip.text: Accessible.name
+                onClicked: { root.menuOpen = false; root.requestRoomRemoval(root.roomId) }
+                contentItem: Image {
+                    anchors.centerIn: parent
+                    width: 14
+                    height: 14
+                    source: Qt.resolvedUrl("../assets/icons/x.svg")
+                    opacity: parent.hovered ? 1 : 0.65
+                }
+                background: Rectangle {
+                    radius: Theme.radiusSmall
+                    color: parent.down
+                           ? Qt.rgba(Theme.danger.r, Theme.danger.g, Theme.danger.b, 0.42)
+                           : (parent.hovered
+                              ? Qt.rgba(Theme.danger.r, Theme.danger.g, Theme.danger.b, 0.28)
+                              : "transparent")
+                }
             }
         }
 
@@ -399,13 +428,6 @@ FocusScope {
                     onClicked: { if (root.controller) root.controller.setPrimaryRoom(root.roomId); root.menuOpen = false }
                     contentItem: Text { text: root.controller && root.controller.workspace && root.controller.workspace.layoutMode === "primary-two" ? (root.primary ? "当前主画面 1" : "设为主画面 1") : (root.primary ? "当前主画面" : "设为主画面"); color: "#d6dde5"; leftPadding: 8; verticalAlignment: Text.AlignVCenter; font.pixelSize: 13 }
                     background: Rectangle { radius: 5; color: parent.hovered ? "#241b17" : "transparent" }
-                }
-                ToolButton {
-                    width: parent.width; height: 32
-                    Accessible.name: "移除房间"
-                    onClicked: { root.menuOpen = false; root.requestRoomRemoval(root.roomId) }
-                    contentItem: Text { text: "移除房间"; color: parent.hovered ? "#ff9b92" : "#d6dde5"; leftPadding: 8; verticalAlignment: Text.AlignVCenter; font.pixelSize: 13 }
-                    background: Rectangle { radius: 5; color: parent.hovered ? "#4b1c1c" : "transparent" }
                 }
             }
         }

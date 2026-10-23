@@ -2466,13 +2466,16 @@ void QmlInteractionTest::exposesRoomVolumeAndRefreshControls()
     QObject *refresh = tile->findChild<QObject *>(QStringLiteral("refreshRoomAction"));
     QObject *topBar = tile->findChild<QObject *>(QStringLiteral("roomTopBar"));
     QObject *topActions = tile->findChild<QObject *>(QStringLiteral("roomTopActions"));
+    QObject *closeRoomButton = tile->findChild<QObject *>(QStringLiteral("closeRoomButton"));
     QObject *cardSurface = tile->findChild<QObject *>(QStringLiteral("roomCardSurface"));
     QVERIFY(slider != nullptr);
     QVERIFY(refresh != nullptr);
     QVERIFY(topBar != nullptr);
     QVERIFY(topActions != nullptr);
+    QVERIFY(closeRoomButton != nullptr);
     QVERIFY(cardSurface != nullptr);
     QVERIFY(topActions->property("width").toDouble() >= 32.0);
+    QVERIFY(closeRoomButton->property("width").toDouble() >= 30.0);
     QCOMPARE(qobject_cast<QQuickItem *>(topBar)->parentItem(),
              qobject_cast<QQuickItem *>(tile.get()));
     QVERIFY(topBar->property("z").toDouble() > cardSurface->property("z").toDouble());
@@ -2485,6 +2488,8 @@ void QmlInteractionTest::exposesRoomVolumeAndRefreshControls()
     QVERIFY(menu->property("z").toDouble() > topBar->property("z").toDouble());
     QVERIFY(tile->property("z").toDouble() > 0.0);
     tile->setProperty("menuOpen", false);
+    QVERIFY(QMetaObject::invokeMethod(closeRoomButton, "clicked"));
+    QCOMPARE(controller.removedRoom, QStringLiteral("63136"));
     QCOMPARE(slider->objectName(), QStringLiteral("roomVolumeSlider"));
     QObject *sliderHandle = tile->findChild<QObject *>(QStringLiteral("roomVolumeSliderHandle"));
     QVERIFY(sliderHandle != nullptr);

@@ -11,12 +11,119 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    name: Upload Release Assets
-    runs-on: ubuntu-latest
+  build-windows:
+    name: Build Windows 11 Installer
+    runs-on: windows-2022
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller pillow
+          pip install -r native/service/requirements.txt
+
+      - name: Setup MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Qt 6.8.2
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '6.8.2'
+          host: 'windows'
+          target: 'desktop'
+          arch: 'win64_msvc2022_64'
+          modules: 'qtwebsockets qtsvg qtshadertools'
+          cache: true
+
+      - name: Setup libmpv
+        shell: pwsh
+        run: |
+          $mpvDir = "$pwd\native\sdk\mpv"
+          New-Item -ItemType Directory -Force -Path $mpvDir | Out-Null
+          $archive = "$pwd\native\sdk\mpv.7z"
+          $mpvUrl = "https://github.com/shinchiro/mpv-winbuild-cmake/releases/download/20261021/mpv-dev-x86_64-20261021-git-e471496c56.7z"
+          Write-Host "Downloading libmpv from $mpvUrl ..."
+          Invoke-WebRequest -Uri $mpvUrl -OutFile $archive -MaximumRedirection 5
+          7z x $archive "-o$mpvDir" -y
+          if (-not (Test-Path "$mpvDir\mpv.lib")) {
+            Write-Host "Generating mpv.lib from libmpv-2.dll ..."
+            $def = "$mpvDir\libmpv.def"
+            $runtime = "$mpvDir\libmpv-2.dll"
+            $exports = & dumpbin /exports $runtime | ForEach-Object {
+              if ($_ -match '^\s+\d+\s+[0-9A-F]+\s+[0-9A-F]+\s+(\S+)\s*$') { $matches[1] }
+            } | Where-Object { $_ -like 'mpv_*' }
+            $defLines = [System.Collections.Generic.List[string]]::new()
+            $defLines.Add('LIBRARY libmpv-2.dll')
+            $defLines.Add('EXPORTS')
+            foreach ($exp in $exports) { $defLines.Add("  $exp") }
+            $defLines | Set-Content -LiteralPath $def -Encoding ascii
+            & lib /nologo /machine:x64 /def:$def /out:"$mpvDir\mpv.lib"
+          }
+          Write-Host "libmpv ready in $mpvDir"
+
+      - name: Build StreamGet service
+        shell: pwsh
+        run: |
+          $repoRoot = $pwd.Path
+          $nativeRoot = "$repoRoot\native"
+          $distPath = "$nativeRoot\out\service"
+          $workPath = "$nativeRoot\out\pyinstaller"
+          New-Item -ItemType Directory -Force -Path $distPath, $workPath | Out-Null
+          pyinstaller --noconfirm --clean --onedir --log-level WARN --name streamget_service `
+            --paths $repoRoot --distpath $distPath --workpath $workPath --specpath $workPath `
+            --add-data "$nativeRoot\app\resources\hamster_agent_roster.json;native/app/resources" `
+            "$nativeRoot\service\streamget_service.py"
+          if (-not (Test-Path "$distPath\streamget_service\streamget_service.exe")) {
+            throw "streamget_service.exe was not created."
+          }
+
+      - name: Configure and Build Native Windows App
+        shell: pwsh
+        run: |
+          $qtRoot = (Resolve-Path "$env:Qt6_DIR\..\..\..").Path
+          $mpvRoot = "$pwd\native\sdk\mpv"
+          $env:QT_ROOT = $qtRoot
+          $env:MPV_ROOT = $mpvRoot
+          cmake -B native/out/build/windows-x64-release -S native -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            "-DQT_ROOT=$qtRoot" `
+            "-DMPV_ROOT=$mpvRoot"
+          cmake --build native/out/build/windows-x64-release --target douyu_monitor_native
+
+      - name: Build Windows Installer
+        shell: pwsh
+        run: |
+          powershell.exe -ExecutionPolicy Bypass -File .\native\scripts\build-windows-installer.ps1
+
+      - name: Upload Windows Installer Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: native/out/installer/DouyuMonitor-Setup-*.exe
+
+  release:
+    name: Upload Release Assets
+    runs-on: ubuntu-latest
+    needs: [build-windows]
+    if: always()
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Windows Installer Artifact
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: windows-installer
+          path: native/out/installer/
 
       - name: Create GitHub Release and Upload Assets
         uses: softprops/action-gh-release@v2
@@ -25,6 +132,7 @@ jobs:
             out/packages/douyu-monitor_*.deb
             out/packages/DouyuMonitor-*-linux-x64.tar.gz
             out/packages/SHA256SUMS.txt
+            native/out/installer/DouyuMonitor-Setup-*.exe
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
