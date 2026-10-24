@@ -34,6 +34,7 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
 
       - name: Install Qt 6.7.3
+        id: install-qt
         uses: jurplel/install-qt-action@v4
         with:
           version: '6.7.3'
@@ -93,13 +94,22 @@ jobs:
       - name: Configure and Build Native Windows App
         shell: pwsh
         run: |
-          $qtRoot = (Resolve-Path "$env:Qt6_DIR\..\..\..").Path
+          $qtRoot = if ($env:QT_ROOT_DIR -and (Test-Path $env:QT_ROOT_DIR)) {
+            $env:QT_ROOT_DIR
+          } elseif ($env:QT_ROOT -and (Test-Path $env:QT_ROOT)) {
+            $env:QT_ROOT
+          } else {
+            "${{ steps.install-qt.outputs.qt-root-dir }}"
+          }
           $mpvRoot = "$pwd\native\sdk\mpv"
+          Write-Host "Using QT_ROOT: $qtRoot"
+          Write-Host "Using MPV_ROOT: $mpvRoot"
           $env:QT_ROOT = $qtRoot
           $env:MPV_ROOT = $mpvRoot
           cmake -B native/out/build/windows-x64-release -S native -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
             "-DQT_ROOT=$qtRoot" `
+            "-DCMAKE_PREFIX_PATH=$qtRoot" `
             "-DMPV_ROOT=$mpvRoot"
           cmake --build native/out/build/windows-x64-release --target douyu_monitor_native
 
@@ -107,6 +117,9 @@ jobs:
         shell: pwsh
         run: |
           powershell.exe -ExecutionPolicy Bypass -File .\native\scripts\build-windows-installer.ps1
+          if ($LASTEXITCODE -ne 0) {
+            throw "build-windows-installer.ps1 failed with exit code $LASTEXITCODE"
+          }
 
       - name: Upload Windows Installer Artifact
         uses: actions/upload-artifact@v4
