@@ -140,18 +140,27 @@ jobs:
           }
 
           Write-Host "Running CMake build..."
-          $logPath = "$pwd\cmake_build.log"
-          cmd /c "cmake --build native/out/build/windows-x64-release --target douyu_monitor_native -v > `"$logPath`" 2>&1"
-          $buildCode = $LASTEXITCODE
+          $stdoutLog = "$pwd/build.log"
+          $stderrLog = "$pwd/build_err.log"
+          $buildProc = Start-Process -FilePath "cmake" `
+            -ArgumentList @("--build", "native/out/build/windows-x64-release", "--target", "douyu_monitor_native", "-v") `
+            -NoNewWindow -Wait -PassThru `
+            -RedirectStandardOutput $stdoutLog `
+            -RedirectStandardError $stderrLog
+          $buildCode = $buildProc.ExitCode
           if ($buildCode -ne 0) {
             Write-Host "Build failed with exit code $buildCode"
-            if (Test-Path $logPath) {
-              $lines = Get-Content $logPath -Tail 80
-              foreach ($line in $lines) {
-                [Console]::Out.WriteLine("::error title=CMakeBuild::$line")
+            if (Test-Path $stderrLog) {
+              $errLines = Get-Content $stderrLog -Tail 60
+              foreach ($l in $errLines) {
+                [Console]::WriteLine("::error::$l")
               }
-            } else {
-              [Console]::Out.WriteLine("::error title=CMakeBuild::Log file not found: $logPath")
+            }
+            if (Test-Path $stdoutLog) {
+              $outLines = Get-Content $stdoutLog -Tail 60
+              foreach ($l in $outLines) {
+                [Console]::WriteLine("::error::$l")
+              }
             }
             exit $buildCode
           }
@@ -197,7 +206,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-build-failure-logs
-          path: cmake_build.log
+          path: |
+            build.log
+            build_err.log
           if-no-files-found: ignore
 
       - name: Upload Windows Installer Artifact
