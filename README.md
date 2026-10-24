@@ -1,6 +1,6 @@
 # DouyuMonitor
 
-DouyuMonitor 是基于 Qt Quick/QML、C++ 和 libmpv 的 Windows x64 斗鱼多直播间监看工具。当前 `main` 只维护原生 Qt 实现，正式版布局最多支持 16 路并全部解码，24 路全解码测试版通过独立构建开关生成；旧 Electron/TypeScript 实现已从 `main` 移除，并保存在 `legacy-framework` 分支供历史追溯。
+DouyuMonitor 是基于 Qt Quick/QML、C++ 和 libmpv 的 Windows 与 Linux 多直播间监看客户端。当前 `main` 维护原生 Qt 实现，正式版布局最多支持 16 路并全部解码，24 路全解码测试版通过独立构建开关生成；旧 Electron/TypeScript 实现已从 `main` 移除，并保存在 `legacy-framework` 分支供历史追溯。
 
 ## 界面预览
 
@@ -32,21 +32,23 @@ DouyuMonitor 是基于 Qt Quick/QML、C++ 和 libmpv 的 Windows x64 斗鱼多�
 
 ## 当前版本
 
-- 正式版：`V0.2.19`
-- Windows 正式版安装包：`DouyuMonitor-Setup-V0.2.19.exe`
-- 24 路全解码测试版：`V0.2.19-beta.24`
-- Windows 24 路测试版安装包：`DouyuMonitor-Setup-V0.2.19-beta.24.exe`
-- 正式版 Release：[DouyuMonitor V0.2.19](https://github.com/KevinTsoi2002/DouyuMonitor/releases/tag/V0.2.19)
-- 24 路测试版 Release：[DouyuMonitor V0.2.19-beta.24](https://github.com/KevinTsoi2002/DouyuMonitor/releases/tag/V0.2.19-beta.24)
-- 未提供代码签名；下载后请以 Release 页面中的 SHA-256 值校验安装包
+- 最新发布版本：`V0.2.24`
+- Windows 安装包：`DouyuMonitor-Setup-V0.2.24.exe`
+- Linux Debian/Ubuntu 安装包：`douyu-monitor_0.2.24_amd64.deb`
+- Linux x64 免安装绿色包：`DouyuMonitor-0.2.24-linux-x64.tar.gz`
+- 校验文件：`SHA256SUMS.txt`
+- 最新 Release 发布页：[DouyuMonitor V0.2.24](https://github.com/realsky-lgh/DouyuMonitor/releases/tag/v0.2.24)
+- 未提供商业代码签名；下载后请以 Release 页面中的 SHA-256 值校验安装包
 
 ## 功能
 
 - 按房间号或主播名搜索并添加斗鱼直播间
+- 监控窗口右上角提供快捷关闭「X」按钮（与功能菜单并排），支持一键快速移除监看房间
 - 自动布局、主直播间布局和双主直播间布局
 - 正式版自动布局、主直播间布局和双主直播间布局最多 16 路并全部解码；双主布局要求至少 4 路，两个主画面均享有高画质优先级
 - 24 路全解码测试版支持三种布局最多 24 路，并同时创建 24 路播放器
 - 每个房间独立弹幕、弹幕过滤、重复抑制和峰值治理
+- 多线程高帧率渲染循环与弹幕纹理缓存优化，大幅降低高路数下的 GPU 与主线程开销
 - 房间资料、主播头像、标题、热度和开播状态定时刷新
 - 历史记录、收藏、自定义分组和工作区预设
 - 顶栏房间列表按钮右侧提供CSTG狼团S1导航页入口，按独立队伍展示内置公会名单；未分配成员进入“未分队”，队伍管理位于“设置 -> 队伍管理”
@@ -57,6 +59,7 @@ DouyuMonitor 是基于 Qt Quick/QML、C++ 和 libmpv 的 Windows x64 斗鱼多�
 - 声音总控、单声道/多声道、独立音量和默认音频焦点
 - StreamGet 动态清晰度列表、播放源重试和状态 Toast
 - 应用级全屏，支持 F11 切换和 Escape 退出
+- 跨平台支持：全面支持 Windows 10/11 x64 与 Linux x64（Ubuntu、Debian、Fedora、Arch 等）
 - Windows 系统通知、快捷键和关闭生命周期保护
 - Windows 托盘后台托管：隐藏窗口后继续保留音频、状态检测和通知，暂停视频与弹幕渲染；从托盘恢复时自动重新渲染
 
@@ -114,7 +117,33 @@ ctest --preset windows-x64-release
 .\scripts\build-windows-installer.ps1
 ```
 
-安装包输出到 `native/out/installer/DouyuMonitor-Setup-V0.2.19.exe`。后续版本会自动将版本号加入安装包文件名。构建 24 路全解码测试版时执行 `.\scripts\build-windows-installer.ps1 -ReleaseDir .\out\build\windows-x64-beta24 -Version 0.2.19-beta.24`。运行安装包时可选择安装目录；如果选择 `D:\` 这样的磁盘根目录，安装器会自动使用 `D:\DouyuMonitor`，不会把程序文件直接写入根目录。安装完成后会创建开始菜单和可选的桌面快捷方式，并可直接启动程序。卸载入口由 Inno Setup 生成的 `unins000.exe` 提供，同时登记到 Windows 设置的“已安装的应用”。
+安装包输出到 `native/out/installer/DouyuMonitor-Setup-V0.2.24.exe`。后续版本会自动将版本号加入安装包文件名。构建 24 路全解码测试版时执行 `.\scripts\build-windows-installer.ps1 -ReleaseDir .\out\build\windows-x64-beta24 -Version 0.2.24-beta.24`。运行安装包时可选择安装目录；如果选择 `D:\` 这样的磁盘根目录，安装器会自动使用 `D:\DouyuMonitor`，不会把程序文件直接写入根目录。安装完成后会创建开始菜单和可选的桌面快捷方式，并可直接启动程序。卸载入口由 Inno Setup 生成的 `unins000.exe` 提供，同时登记到 Windows 设置的“已安装的应用”。
+
+### Linux 平台构建与打包
+
+系统依赖安装（以 Ubuntu 24.04/Debian 为例）：
+
+```bash
+sudo apt-get update && sudo apt-get install -y \
+  qt6-base-dev qt6-declarative-dev qt6-websockets-dev qt6-shadertools-dev \
+  libgl1-mesa-dev libmpv-dev ninja-build python3-venv dpkg-dev
+```
+
+一键构建并打包（生成 `.deb` 与 `.tar.gz` 产物）：
+
+```bash
+bash native/scripts/build-linux-packages.sh
+```
+
+生成的安装包位于 `out/packages/`：
+- `douyu-monitor_0.2.24_amd64.deb`
+- `DouyuMonitor-0.2.24-linux-x64.tar.gz`
+
+本机快捷安装（包含桌面图标与启动项集成）：
+
+```bash
+bash native/scripts/install-desktop.sh
+```
 
 CSTG狼团S1导航页展示应用内置的公会名单、主播头像和开播状态，不根据直播资料动态扩张名单。已确认房间号可以直接加入当前工作区；无法自动确认的成员需要在行内手工输入房间号。快捷加入受当前构建的布局容量限制。隐藏导航页的空工作区启动时不会为名单检查启动服务。
 
