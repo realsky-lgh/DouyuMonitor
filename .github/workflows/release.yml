@@ -133,13 +133,22 @@ jobs:
           $env:PATH = "$qtRoot/bin;$env:PATH"
 
           Write-Host "Running CMake configure..."
-          & cmake -B native/out/build/windows-x64-release -S native -G Ninja `
+          $configOutput = & cmake -B native/out/build/windows-x64-release -S native -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
             "-DQT_ROOT=$qtRoot" `
             "-DCMAKE_PREFIX_PATH=$qtRoot" `
-            "-DMPV_ROOT=$mpvRoot"
-          if ($LASTEXITCODE -ne 0) {
-            throw "CMake configure failed with exit code $LASTEXITCODE"
+            "-DMPV_ROOT=$mpvRoot" 2>&1
+          $configCode = $LASTEXITCODE
+          Write-Host ($configOutput -join "`n")
+          if ($configCode -ne 0) {
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git checkout -B ci-debug-logs
+            $configOutput | Out-File -FilePath "build_error.log" -Encoding utf8
+            git add -f build_error.log
+            git commit -m "ci: capture cmake configure error log"
+            git push -f origin ci-debug-logs
+            throw "CMake configure failed with exit code $configCode"
           }
 
           Write-Host "Running CMake build..."
@@ -147,9 +156,13 @@ jobs:
           $buildCode = $LASTEXITCODE
           Write-Host ($buildOutput -join "`n")
           if ($buildCode -ne 0) {
-            $lastLines = ($buildOutput | Select-Object -Last 100) -join "`n"
-            Write-Host "Reporting failure to GitHub Issue..."
-            gh issue create --repo realsky-lgh/DouyuMonitor --title "CMake Build Error" --body "```$lastLines```"
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git checkout -B ci-debug-logs
+            $buildOutput | Out-File -FilePath "build_error.log" -Encoding utf8
+            git add -f build_error.log
+            git commit -m "ci: capture cmake build error log"
+            git push -f origin ci-debug-logs
             throw "CMake build failed with exit code $buildCode"
           }
 
