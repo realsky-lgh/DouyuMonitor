@@ -66,7 +66,9 @@ endif()
 enable_testing()
 
 qt_policy(SET QTP0001 NEW)
-qt_policy(SET QTP0004 NEW)
+if(Qt6_VERSION VERSION_GREATER_EQUAL "6.8.0")
+    qt_policy(SET QTP0004 NEW)
+endif()
 
 set(DOUYU_QML_ICON_ASSETS
     app/qml/assets/douyu_monitor.svg
