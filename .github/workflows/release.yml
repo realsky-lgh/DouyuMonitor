@@ -84,7 +84,7 @@ jobs:
               if ($_ -match '^\s+\d+\s+[0-9A-F]+\s+[0-9A-F]+\s+(\S+)\s*$') { $matches[1] }
             } | Where-Object { $_ -like 'mpv_*' }
             $defLines = [System.Collections.Generic.List[string]]::new()
-            $defLines.Add('LIBRARY libmpv-2.dll')
+            $defLines.Add('LIBRARY mpv.dll')
             $defLines.Add('EXPORTS')
             foreach ($exp in $exports) { $defLines.Add("  $exp") }
             $defLines | Set-Content -LiteralPath $def -Encoding ascii
@@ -92,6 +92,7 @@ jobs:
           }
           New-Item -ItemType Directory -Force -Path "$mpvDir\lib" | Out-Null
           Copy-Item "$mpvDir\mpv.lib" "$mpvDir\lib\mpv.lib" -Force
+          Copy-Item "$mpvDir\libmpv-2.dll" "$mpvDir\mpv.dll" -Force
           Write-Host "libmpv ready in $mpvDir"
 
       - name: Build StreamGet service
@@ -138,8 +139,9 @@ jobs:
           }
 
           Write-Host "Running CMake build..."
-          & cmake --build native/out/build/windows-x64-release --target douyu_monitor_native
+          & cmake --build native/out/build/windows-x64-release --target douyu_monitor_native -v 2>&1 | Tee-Object -FilePath "build.log"
           if ($LASTEXITCODE -ne 0) {
+            Get-Content "build.log" -Tail 150 | ForEach-Object { Write-Host "::error::$_" }
             throw "CMake build failed with exit code $LASTEXITCODE"
           }
 
@@ -160,6 +162,16 @@ jobs:
           if (-not (Test-Path $qmlDest)) {
             Copy-Item "$qtRoot/qml" $qmlDest -Recurse -Force
           }
+          $basicButton = Join-Path $releaseDir "qml/QtQuick/Controls/Basic/Button.qml"
+          if (-not (Test-Path $basicButton)) {
+            Write-Host "Ensuring QtQuick Controls Basic style is copied..."
+            Copy-Item "$qtRoot/qml/QtQuick" (Join-Path $releaseDir "qml") -Recurse -Force
+          }
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress
 
       - name: Build Windows Installer
         shell: pwsh
@@ -168,6 +180,16 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw "build-windows-installer.ps1 failed with exit code $LASTEXITCODE"
           }
+
+      - name: Upload Build Log on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build-failure-logs
+          path: |
+            build.log
+            native/out/build/windows-x64-release/CMakeFiles/CMakeError.log
+            native/out/build/windows-x64-release/CMakeFiles/CMakeOutput.log
 
       - name: Upload Windows Installer Artifact
         uses: actions/upload-artifact@v4
