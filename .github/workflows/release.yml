@@ -52,13 +52,30 @@ jobs:
           Write-Host "Downloading libmpv from $mpvUrl ..."
           Invoke-WebRequest -Uri $mpvUrl -OutFile $archive -MaximumRedirection 5
           7z x $archive "-o$mpvDir" -y
-          if (-not (Test-Path "$mpvDir\libmpv-2.dll")) {
-            $childDll = Get-ChildItem -Path $mpvDir -Filter "libmpv-2.dll" -Recurse | Select-Object -First 1
-            if ($childDll) {
-              $parent = $childDll.DirectoryName
-              Copy-Item "$parent\*" $mpvDir -Recurse -Force
-            }
+          
+          # Ensure libmpv-2.dll is at root of mpvDir
+          $dll = Get-ChildItem -Path $mpvDir -Filter "libmpv-2.dll" -Recurse | Select-Object -First 1
+          if ($dll -and $dll.DirectoryName -ne $mpvDir) {
+            Copy-Item $dll.FullName $mpvDir -Force
           }
+          if (-not (Test-Path "$mpvDir\libmpv-2.dll")) {
+            throw "libmpv-2.dll not found in $mpvDir"
+          }
+
+          # Ensure include/mpv/client.h exists
+          $clientH = Get-ChildItem -Path $mpvDir -Filter "client.h" -Recurse | Select-Object -First 1
+          if ($clientH) {
+            Write-Host "Found client.h at: $($clientH.FullName)"
+            $mpvIncludeDir = "$mpvDir\include\mpv"
+            if (-not (Test-Path "$mpvIncludeDir\client.h")) {
+              New-Item -ItemType Directory -Force -Path $mpvIncludeDir | Out-Null
+              Copy-Item "$($clientH.DirectoryName)\*" $mpvIncludeDir -Recurse -Force
+            }
+          } else {
+            throw "client.h not found in libmpv archive"
+          }
+
+          # Generate mpv.lib if not present
           if (-not (Test-Path "$mpvDir\mpv.lib")) {
             Write-Host "Generating mpv.lib from libmpv-2.dll ..."
             $def = "$mpvDir\libmpv.def"
@@ -73,6 +90,8 @@ jobs:
             $defLines | Set-Content -LiteralPath $def -Encoding ascii
             & lib /nologo /machine:x64 /def:$def /out:"$mpvDir\mpv.lib"
           }
+          New-Item -ItemType Directory -Force -Path "$mpvDir\lib" | Out-Null
+          Copy-Item "$mpvDir\mpv.lib" "$mpvDir\lib\mpv.lib" -Force
           Write-Host "libmpv ready in $mpvDir"
 
       - name: Build StreamGet service
@@ -101,17 +120,44 @@ jobs:
           } else {
             "${{ steps.install-qt.outputs.qt-root-dir }}"
           }
-          $mpvRoot = "$pwd\native\sdk\mpv"
+          $qtRoot = $qtRoot.TrimEnd('\/').Replace('\', '/')
+          $mpvRoot = ("$pwd/native/sdk/mpv").Replace('\', '/')
           Write-Host "Using QT_ROOT: $qtRoot"
           Write-Host "Using MPV_ROOT: $mpvRoot"
           $env:QT_ROOT = $qtRoot
           $env:MPV_ROOT = $mpvRoot
+
           cmake -B native/out/build/windows-x64-release -S native -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
             "-DQT_ROOT=$qtRoot" `
             "-DCMAKE_PREFIX_PATH=$qtRoot" `
             "-DMPV_ROOT=$mpvRoot"
+          if ($LASTEXITCODE -ne 0) {
+            throw "CMake configure failed with exit code $LASTEXITCODE"
+          }
+
           cmake --build native/out/build/windows-x64-release --target douyu_monitor_native
+          if ($LASTEXITCODE -ne 0) {
+            throw "CMake build failed with exit code $LASTEXITCODE"
+          }
+
+          # Ensure Qt runtime dependencies required by installer script are present
+          $releaseDir = "native/out/build/windows-x64-release"
+          Get-ChildItem -Path "$qtRoot/bin" -Filter "*.dll" | ForEach-Object {
+            $dest = Join-Path $releaseDir $_.Name
+            if (-not (Test-Path $dest)) {
+              Copy-Item $_.FullName $dest -Force
+            }
+          }
+          $platformDest = Join-Path $releaseDir "platforms"
+          New-Item -ItemType Directory -Force -Path $platformDest | Out-Null
+          if (-not (Test-Path (Join-Path $platformDest "qwindows.dll"))) {
+            Copy-Item "$qtRoot/plugins/platforms/qwindows.dll" $platformDest -Force
+          }
+          $qmlDest = Join-Path $releaseDir "qml"
+          if (-not (Test-Path $qmlDest)) {
+            Copy-Item "$qtRoot/qml" $qmlDest -Recurse -Force
+          }
 
       - name: Build Windows Installer
         shell: pwsh
@@ -131,7 +177,7 @@ jobs:
     name: Upload Release Assets
     runs-on: ubuntu-latest
     needs: [build-windows]
-    if: always()
+    if: success()
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
