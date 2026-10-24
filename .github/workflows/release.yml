@@ -196,10 +196,31 @@ jobs:
 
       - name: Build Windows Installer
         shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          powershell.exe -ExecutionPolicy Bypass -File .\native\scripts\build-windows-installer.ps1
-          if ($LASTEXITCODE -ne 0) {
-            throw "build-windows-installer.ps1 failed with exit code $LASTEXITCODE"
+          $iscc = (Get-Command iscc.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue)
+          if ($iscc) {
+            $env:INNO_SETUP_COMPILER = $iscc
+          } elseif (Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe") {
+            $env:INNO_SETUP_COMPILER = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          } elseif (Test-Path "C:\Program Files\Inno Setup 6\ISCC.exe") {
+            $env:INNO_SETUP_COMPILER = "C:\Program Files\Inno Setup 6\ISCC.exe"
+          }
+          Write-Host "Using INNO_SETUP_COMPILER: $env:INNO_SETUP_COMPILER"
+
+          $installerOutput = & powershell.exe -ExecutionPolicy Bypass -File .\native\scripts\build-windows-installer.ps1 2>&1
+          $installerCode = $LASTEXITCODE
+          Write-Host ($installerOutput -join "`n")
+          if ($installerCode -ne 0) {
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git checkout -B ci-debug-logs
+            $installerOutput | Out-File -FilePath "build_error.log" -Encoding utf8
+            git add -f build_error.log
+            git commit -m "ci: capture build-windows-installer error log"
+            git push -f origin ci-debug-logs
+            throw "build-windows-installer.ps1 failed with exit code $installerCode"
           }
 
       - name: Upload Build Log on Failure
