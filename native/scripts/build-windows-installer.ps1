@@ -84,7 +84,13 @@ $runtimeFiles = @(
 )
 foreach ($runtimeFile in $runtimeFiles) {
     $source = Join-Path $releaseDir $runtimeFile
-    if (-not (Test-Path $source)) { throw "Required runtime file was not found: $source" }
+    if (-not (Test-Path $source)) {
+        if ($runtimeFile -eq 'Qt6QmlMeta.dll') {
+            # Qt6QmlMeta was introduced in Qt 6.8; skip when building on Qt 6.7
+            continue
+        }
+        throw "Required runtime file was not found: $source"
+    }
     Copy-Item $source -Destination $stageDir
 }
 
