@@ -127,7 +127,8 @@ jobs:
           $env:QT_ROOT = $qtRoot
           $env:MPV_ROOT = $mpvRoot
 
-          cmake -B native/out/build/windows-x64-release -S native -G Ninja `
+          Write-Host "Running CMake configure..."
+          & cmake -B native/out/build/windows-x64-release -S native -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
             "-DQT_ROOT=$qtRoot" `
             "-DCMAKE_PREFIX_PATH=$qtRoot" `
@@ -136,7 +137,8 @@ jobs:
             throw "CMake configure failed with exit code $LASTEXITCODE"
           }
 
-          cmake --build native/out/build/windows-x64-release --target douyu_monitor_native
+          Write-Host "Running CMake build..."
+          & cmake --build native/out/build/windows-x64-release --target douyu_monitor_native
           if ($LASTEXITCODE -ne 0) {
             throw "CMake build failed with exit code $LASTEXITCODE"
           }

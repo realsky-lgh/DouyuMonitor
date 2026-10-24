@@ -1162,6 +1162,7 @@ if(WIN32 AND EXISTS "${QT_ROOT}/bin/windeployqt.exe")
             --force
             --no-translations
             --no-compiler-runtime
+            --qmldir "${CMAKE_CURRENT_SOURCE_DIR}/app/qml"
             "$<TARGET_FILE:douyu_monitor_native>"
         COMMAND "${CMAKE_COMMAND}"
             -DRUNTIME_DIR:PATH=$<TARGET_FILE_DIR:douyu_monitor_native>
