@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 jobs:
   build-windows:
@@ -113,6 +114,8 @@ jobs:
 
       - name: Configure and Build Native Windows App
         shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $qtRoot = if ($env:QT_ROOT_DIR -and (Test-Path $env:QT_ROOT_DIR)) {
             $env:QT_ROOT_DIR
@@ -140,29 +143,14 @@ jobs:
           }
 
           Write-Host "Running CMake build..."
-          $stdoutLog = "$pwd/build.log"
-          $stderrLog = "$pwd/build_err.log"
-          $buildProc = Start-Process -FilePath "cmake" `
-            -ArgumentList @("--build", "native/out/build/windows-x64-release", "--target", "douyu_monitor_native", "-v") `
-            -NoNewWindow -Wait -PassThru `
-            -RedirectStandardOutput $stdoutLog `
-            -RedirectStandardError $stderrLog
-          $buildCode = $buildProc.ExitCode
+          $buildOutput = & cmake --build native/out/build/windows-x64-release --target douyu_monitor_native -v 2>&1
+          $buildCode = $LASTEXITCODE
+          Write-Host ($buildOutput -join "`n")
           if ($buildCode -ne 0) {
-            Write-Host "Build failed with exit code $buildCode"
-            if (Test-Path $stderrLog) {
-              $errLines = Get-Content $stderrLog -Tail 60
-              foreach ($l in $errLines) {
-                [Console]::WriteLine("::error::$l")
-              }
-            }
-            if (Test-Path $stdoutLog) {
-              $outLines = Get-Content $stdoutLog -Tail 60
-              foreach ($l in $outLines) {
-                [Console]::WriteLine("::error::$l")
-              }
-            }
-            exit $buildCode
+            $lastLines = ($buildOutput | Select-Object -Last 100) -join "`n"
+            Write-Host "Reporting failure to GitHub Issue..."
+            gh issue create --repo realsky-lgh/DouyuMonitor --title "CMake Build Error" --body "```$lastLines```"
+            throw "CMake build failed with exit code $buildCode"
           }
 
           # Ensure Qt runtime dependencies required by installer script are present
