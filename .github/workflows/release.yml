@@ -127,6 +127,7 @@ jobs:
           Write-Host "Using MPV_ROOT: $mpvRoot"
           $env:QT_ROOT = $qtRoot
           $env:MPV_ROOT = $mpvRoot
+          $env:PATH = "$qtRoot/bin;$env:PATH"
 
           Write-Host "Running CMake configure..."
           & cmake -B native/out/build/windows-x64-release -S native -G Ninja `
@@ -139,10 +140,20 @@ jobs:
           }
 
           Write-Host "Running CMake build..."
-          & cmake --build native/out/build/windows-x64-release --target douyu_monitor_native -v 2>&1 | Tee-Object -FilePath "build.log"
-          if ($LASTEXITCODE -ne 0) {
-            Get-Content "build.log" -Tail 150 | ForEach-Object { Write-Host "::error::$_" }
-            throw "CMake build failed with exit code $LASTEXITCODE"
+          $logPath = "$pwd\cmake_build.log"
+          cmd /c "cmake --build native/out/build/windows-x64-release --target douyu_monitor_native -v > `"$logPath`" 2>&1"
+          $buildCode = $LASTEXITCODE
+          if ($buildCode -ne 0) {
+            Write-Host "Build failed with exit code $buildCode"
+            if (Test-Path $logPath) {
+              $lines = Get-Content $logPath -Tail 80
+              foreach ($line in $lines) {
+                [Console]::Out.WriteLine("::error title=CMakeBuild::$line")
+              }
+            } else {
+              [Console]::Out.WriteLine("::error title=CMakeBuild::Log file not found: $logPath")
+            }
+            exit $buildCode
           }
 
           # Ensure Qt runtime dependencies required by installer script are present
@@ -186,10 +197,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-build-failure-logs
-          path: |
-            build.log
-            native/out/build/windows-x64-release/CMakeFiles/CMakeError.log
-            native/out/build/windows-x64-release/CMakeFiles/CMakeOutput.log
+          path: cmake_build.log
+          if-no-files-found: ignore
 
       - name: Upload Windows Installer Artifact
         uses: actions/upload-artifact@v4
