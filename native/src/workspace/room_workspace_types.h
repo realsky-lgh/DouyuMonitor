@@ -38,6 +38,7 @@ struct RoomSnapshot {
     int volume = 100;
     QVariantList availableQualities;
     bool renderEnabled = true;
+    bool recurring = true;
 };
 
 using RoomSnapshots = QVector<RoomSnapshot>;

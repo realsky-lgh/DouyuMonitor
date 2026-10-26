@@ -132,6 +132,11 @@ QVector<QStringList> importRankIdentities(const QVariantList &entries)
     return identities;
 }
 
+constexpr qint64 kLibraryStatusFreshTtlMs = 60'000;
+constexpr int kMaxInFlightLibrarySearches = 2;
+constexpr int kLibraryRequestSpacingMs = 120;
+constexpr int kLibraryNotifyDebounceMs = 250;
+
 } // namespace
 
 AppController::AppController(QString serviceProgram, QSettings *settings,
@@ -157,6 +162,12 @@ AppController::AppController(QString serviceProgram,
     workspaceSaveTimer_->setSingleShot(true);
     workspaceSaveTimer_->setInterval(250);
     connect(workspaceSaveTimer_, &QTimer::timeout, this, &AppController::persistWorkspace);
+    libraryQueueTimer_ = new QTimer(this);
+    libraryQueueTimer_->setSingleShot(true);
+    connect(libraryQueueTimer_, &QTimer::timeout, this, &AppController::pumpLibraryQueue);
+    libraryNotifyTimer_ = new QTimer(this);
+    libraryNotifyTimer_->setSingleShot(true);
+    connect(libraryNotifyTimer_, &QTimer::timeout, this, &AppController::flushLibraryNotifications);
     guildRosterNotifyTimer_ = new QTimer(this);
     guildRosterNotifyTimer_->setSingleShot(true);
     connect(guildRosterNotifyTimer_, &QTimer::timeout, this, &AppController::guildRosterChanged);
@@ -259,6 +270,8 @@ AppController::AppController(QString serviceProgram,
             });
     connect(favoriteMonitor_.get(), &FavoriteMonitor::roomUpdated,
             this, &AppController::onFavoriteRoomUpdated);
+    connect(favoriteMonitor_.get(), &FavoriteMonitor::roomCheckFinished,
+            this, &AppController::onLibraryRoomCheckFinished);
 
     connect(coordinator_.get(), &MultiRoomCoordinator::roomSnapshotsChanged,
             this, &AppController::onSnapshotsChanged);
@@ -411,6 +424,10 @@ void AppController::shutdown()
 {
     if (shuttingDown_) return;
     shuttingDown_ = true;
+    if (libraryQueueTimer_ != nullptr) libraryQueueTimer_->stop();
+    if (libraryNotifyTimer_ != nullptr) libraryNotifyTimer_->stop();
+    libraryPendingQueue_.clear();
+    libraryActiveRequests_.clear();
     guildRosterNotifyTimer_->stop();
     if (trayService_ != nullptr) trayService_->stop();
     if (guildRoomResolver_ != nullptr) guildRoomResolver_->stop();
@@ -856,6 +873,9 @@ QString AppController::removeHistoryRoom(const QString &roomId)
     }
 
     record->lastOpenedAtMs = 0;
+    libraryPendingQueue_.removeAll(requestedRoomId);
+    libraryActiveRequests_.remove(requestedRoomId);
+    libraryLastCheckedMs_.remove(requestedRoomId);
 
     emit libraryRoomsChanged();
     synchronizeFavoriteMonitor();
@@ -1832,12 +1852,89 @@ void AppController::synchronizeFavoriteMonitor()
     favoriteMonitor_->synchronize(rooms);
 }
 
-void AppController::refreshLibraryLiveStatuses()
+void AppController::refreshLibraryLiveStatuses(const QString &scope, bool force)
 {
-    if (favoriteMonitor_ == nullptr) return;
+    if (favoriteMonitor_ == nullptr || service_ == nullptr || shuttingDown_) return;
+
+    const qint64 now = QDateTime::currentMSecsSinceEpoch();
+    QStringList candidates;
+
     for (const NativeRoomRecord &record : snapshot_.library) {
-        if (record.favorite || record.lastOpenedAtMs > 0) {
-            favoriteMonitor_->requestNow(record.roomId);
+        if (record.roomId.isEmpty()) continue;
+
+        if (scope == QStringLiteral("favorites") && !record.favorite) {
+            continue;
+        }
+        if (scope == QStringLiteral("history") && (record.favorite || record.lastOpenedAtMs <= 0)) {
+            continue;
+        }
+        if (scope.isEmpty() && !record.favorite && record.lastOpenedAtMs <= 0) {
+            continue;
+        }
+
+        if (!force && (now - libraryLastCheckedMs_.value(record.roomId, 0) < kLibraryStatusFreshTtlMs)) {
+            continue;
+        }
+
+        candidates.append(record.roomId);
+    }
+
+    if (candidates.isEmpty()) return;
+
+    std::sort(candidates.begin(), candidates.end(), [this](const QString &a, const QString &b) {
+        const NativeRoomRecord *recA = libraryRecord(a);
+        const NativeRoomRecord *recB = libraryRecord(b);
+        if (!recA || !recB) return a < b;
+        if (recA->favorite != recB->favorite) return recA->favorite > recB->favorite;
+        return recA->lastOpenedAtMs > recB->lastOpenedAtMs;
+    });
+
+    for (const QString &roomId : candidates) {
+        if (!libraryPendingQueue_.contains(roomId) && !libraryActiveRequests_.contains(roomId)) {
+            libraryPendingQueue_.append(roomId);
+        }
+    }
+
+    pumpLibraryQueue();
+}
+
+void AppController::pumpLibraryQueue()
+{
+    if (favoriteMonitor_ == nullptr || shuttingDown_) return;
+
+    while (libraryActiveRequests_.size() < kMaxInFlightLibrarySearches && !libraryPendingQueue_.isEmpty()) {
+        const QString roomId = libraryPendingQueue_.takeFirst();
+        libraryActiveRequests_.insert(roomId);
+        favoriteMonitor_->requestNow(roomId);
+    }
+
+    if (!libraryPendingQueue_.isEmpty() && !libraryQueueTimer_->isActive()) {
+        libraryQueueTimer_->start(kLibraryRequestSpacingMs);
+    }
+}
+
+void AppController::flushLibraryNotifications()
+{
+    if (shuttingDown_) return;
+    emit libraryRoomsChanged();
+    scheduleWorkspaceSave();
+}
+
+void AppController::onLibraryRoomCheckFinished(const QString &roomId, bool success)
+{
+    libraryActiveRequests_.remove(roomId);
+    if (success) {
+        libraryLastCheckedMs_[roomId] = QDateTime::currentMSecsSinceEpoch();
+    }
+
+    if (!libraryPendingQueue_.isEmpty()) {
+        if (!libraryQueueTimer_->isActive()) {
+            libraryQueueTimer_->start(kLibraryRequestSpacingMs);
+        }
+    } else if (libraryActiveRequests_.isEmpty()) {
+        if (libraryNotifyTimer_->isActive()) {
+            libraryNotifyTimer_->stop();
+            flushLibraryNotifications();
         }
     }
 }
@@ -1851,8 +1948,13 @@ void AppController::onFavoriteRoomUpdated(const QString &roomId,
     record->metadata = metadata;
     record->metadata.roomId = roomId;
     favoriteLiveStatuses_.insert(roomId, liveStatus);
-    emit libraryRoomsChanged();
-    scheduleWorkspaceSave();
+
+    if (libraryActiveRequests_.isEmpty() && libraryPendingQueue_.isEmpty()) {
+        libraryNotifyTimer_->stop();
+        flushLibraryNotifications();
+    } else if (!libraryNotifyTimer_->isActive()) {
+        libraryNotifyTimer_->start(kLibraryNotifyDebounceMs);
+    }
 }
 
 void AppController::persistWorkspace()

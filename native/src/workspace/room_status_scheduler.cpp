@@ -32,14 +32,22 @@ void RoomStatusScheduler::synchronize(const RoomSnapshots &rooms)
         if (it == entries_.end()) {
             Entry entry;
             entry.liveStatus = room.liveStatus;
+            entry.recurring = room.recurring;
             auto inserted = entries_.insert(room.roomId, entry);
-            scheduleBase(room.roomId, inserted.value());
+            if (entry.recurring) {
+                scheduleBase(room.roomId, inserted.value());
+            }
             continue;
         }
 
         const bool statusChanged = it->liveStatus != room.liveStatus;
+        const bool recurringChanged = it->recurring != room.recurring;
         it->liveStatus = room.liveStatus;
-        if (statusChanged && it->requestId == 0) {
+        it->recurring = room.recurring;
+        if (!it->recurring && it->timer != nullptr) {
+            it->timer->stop();
+        }
+        if ((statusChanged || recurringChanged) && it->recurring && it->requestId == 0) {
             it->failureCount = 0;
             scheduleBase(room.roomId, it.value());
         }
@@ -94,10 +102,14 @@ std::optional<QString> RoomStatusScheduler::takeCompletedRequest(quint64 request
     entryIt->requestId = 0;
     if (succeeded) {
         entryIt->failureCount = 0;
-        scheduleBase(roomId, entryIt.value());
+        if (entryIt->recurring) {
+            scheduleBase(roomId, entryIt.value());
+        }
     } else {
         ++entryIt->failureCount;
-        scheduleRetry(roomId, entryIt.value());
+        if (entryIt->recurring) {
+            scheduleRetry(roomId, entryIt.value());
+        }
     }
     return roomId;
 }

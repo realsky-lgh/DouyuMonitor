@@ -179,6 +179,7 @@ private slots:
     void keepsImportPreviewAfterRankDisplayUpdates();
     void rejectsImportAfterVerifiedRoomIdentityChanges();
     void keepsImportPreviewWhenBundledRoomIsFirstCached();
+    void pacesAndDebouncesLibraryStatusPolling();
 };
 
 void AppControllerTest::keepsImportPreviewWhenBundledRoomIsFirstCached()
@@ -1612,6 +1613,43 @@ void AppControllerTest::enforcesGuildQuickAddLayoutCapacity()
              QStringLiteral("最多添加 %1 个房间").arg(maxRooms));
     QCOMPARE(controller.rooms()->rowCount(), maxRooms);
 }
+
+void AppControllerTest::pacesAndDebouncesLibraryStatusPolling()
+{
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    QSettings settings(directory.filePath(QStringLiteral("workspace.ini")), QSettings::IniFormat);
+    settings.setValue(
+        QStringLiteral("DouyuMonitor/nativeWorkspaceV1"),
+        QByteArray(R"JSON({"version":2,"library":[
+            {"roomId":"63136","metadata":{"roomId":"63136","anchorName":"主播1","title":"标题1"},"requestedQuality":"auto","favorite":true,"favoriteAddedAtMs":1,"favoriteSortOrder":1,"lastOpenedAtMs":0,"volume":100,"danmakuEnabled":true},
+            {"roomId":"63137","metadata":{"roomId":"63137","anchorName":"主播2","title":"标题2"},"requestedQuality":"auto","favorite":false,"favoriteAddedAtMs":0,"favoriteSortOrder":0,"lastOpenedAtMs":100,"volume":100,"danmakuEnabled":true},
+            {"roomId":"63138","metadata":{"roomId":"63138","anchorName":"主播3","title":"标题3"},"requestedQuality":"auto","favorite":false,"favoriteAddedAtMs":0,"favoriteSortOrder":0,"lastOpenedAtMs":200,"volume":100,"danmakuEnabled":true}
+        ],"groups":[],"activeRoomIds":[],"activeGroupId":"","primaryRoomId":"","audioRoomId":"","presets":[]})JSON"));
+
+    FakeNotificationSink sink;
+    AppController controller(fakeServicePath(), &settings, &sink);
+
+    QSignalSpy librarySpy(&controller, &AppController::libraryRoomsChanged);
+
+    // Initial load: favorite room gets baseline checked, but history rooms do not auto-poll
+    // Now trigger refresh for history only
+    controller.refreshLibraryLiveStatuses(QStringLiteral("history"));
+
+    // Verify debounce and updates arrive
+    QTRY_VERIFY_WITH_TIMEOUT(librarySpy.count() >= 1, 3000);
+    const int countAfterFirstRefresh = librarySpy.count();
+
+    // Calling refresh again immediately within TTL (60s) should be ignored
+    controller.refreshLibraryLiveStatuses(QStringLiteral("history"), false);
+    QTest::qWait(300);
+    QCOMPARE(librarySpy.count(), countAfterFirstRefresh);
+
+    // Force refresh bypasses TTL
+    controller.refreshLibraryLiveStatuses(QStringLiteral("history"), true);
+    QTRY_VERIFY_WITH_TIMEOUT(librarySpy.count() > countAfterFirstRefresh, 3000);
+}
+
 QTEST_GUILESS_MAIN(AppControllerTest)
 
 #include "app_controller_test.moc"

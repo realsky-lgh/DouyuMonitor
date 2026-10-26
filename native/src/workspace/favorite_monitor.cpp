@@ -35,6 +35,7 @@ void FavoriteMonitor::synchronize(const QVector<FavoriteRoomSpec> &rooms)
         snapshot.metadata = room.metadata;
         snapshot.liveStatus = room.liveStatus;
         snapshot.favorite = room.favorite;
+        snapshot.recurring = room.favorite;
         schedulerRooms.push_back(snapshot);
     }
 
@@ -63,13 +64,21 @@ void FavoriteMonitor::onSearchResponse(const ServiceResponse &response)
     const bool valid = response.ok && response.search && response.results.size() == 1
         && response.results.first().roomId == *roomId;
     const auto completed = scheduler_.takeCompletedRequest(response.requestId, valid);
-    if (!completed.has_value() || !valid) return;
+    if (!completed.has_value() || !valid) {
+        emit roomCheckFinished(*roomId, false);
+        return;
+    }
     processResult(*completed, response.results.first());
+    emit roomCheckFinished(*completed, true);
 }
 
 void FavoriteMonitor::onRequestFailed(quint64 requestId)
 {
+    const auto roomId = scheduler_.roomForRequest(requestId);
     scheduler_.takeCompletedRequest(requestId, false);
+    if (roomId.has_value()) {
+        emit roomCheckFinished(*roomId, false);
+    }
 }
 
 void FavoriteMonitor::stop()

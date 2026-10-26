@@ -158,7 +158,7 @@ Rectangle {
                 Accessible.name: "历史"
                 onClicked: {
                     root.viewMode = "history"
-                    if (root.controller) root.controller.refreshLibraryLiveStatuses()
+                    if (root.controller) root.controller.refreshLibraryLiveStatuses("history")
                 }
                 contentItem: Text { text: parent.text; color: parent.checked ? "#ff9b5a" : root.mutedTextColor; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.bold: parent.checked; font.pixelSize: 16 }
                 background: Rectangle { radius: 6; color: parent.checked ? "#241b17" : "transparent"; border.color: parent.checked ? "#6e432d" : "transparent" }
@@ -173,11 +173,23 @@ Rectangle {
                 Accessible.name: "收藏"
                 onClicked: {
                     root.viewMode = "favorites"
-                    if (root.controller) root.controller.refreshLibraryLiveStatuses()
+                    if (root.controller) root.controller.refreshLibraryLiveStatuses("favorites")
                 }
                 contentItem: Text { text: parent.text; color: parent.checked ? "#ff9b5a" : root.mutedTextColor; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.bold: parent.checked; font.pixelSize: 16 }
                 background: Rectangle { radius: 6; color: parent.checked ? "#241b17" : "transparent"; border.color: parent.checked ? "#6e432d" : "transparent" }
                 text: "收藏"
+            }
+        }
+
+        Timer {
+            id: libraryPollingTimer
+            interval: 180000
+            repeat: true
+            running: root.visible && (root.viewMode === "history" || root.viewMode === "favorites")
+            onTriggered: {
+                if (root.controller) {
+                    root.controller.refreshLibraryLiveStatuses(root.viewMode)
+                }
             }
         }
 

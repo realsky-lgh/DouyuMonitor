@@ -45,6 +45,7 @@ private slots:
     void removesUnfavoritedRoomAndCancelsRequest();
     void ignoresUnknownHintsAfterOnlineBaseline();
     void historyRoomUpdatesWithoutEmittingNotificationEvents();
+    void emitsRoomCheckFinishedOnSuccessAndFailure();
 };
 
 void FavoriteMonitorTest::emitsOnlineAndTitleChangesAfterBaseline()
@@ -139,6 +140,30 @@ void FavoriteMonitorTest::historyRoomUpdatesWithoutEmittingNotificationEvents()
     monitor.onSearchResponse(result(2, "99999", true, "历史主播直播了"));
     QCOMPARE(updates.count(), 2);
     QCOMPARE(events.count(), 0);
+}
+
+void FavoriteMonitorTest::emitsRoomCheckFinishedOnSuccessAndFailure()
+{
+    quint64 nextRequestId = 1;
+    FavoriteMonitor monitor([&nextRequestId](const QString &) { return nextRequestId++; },
+                            [](quint64) {}, RoomRefreshTiming{60'000, 120'000, {}, 0});
+
+    monitor.synchronize({favorite("100", RoomLiveStatus::Unknown, "主播A")});
+
+    QSignalSpy finishedSpy(&monitor, &FavoriteMonitor::roomCheckFinished);
+
+    // Baseline request 1 for "100" succeeds
+    monitor.onSearchResponse(result(1, "100", true, "主播A"));
+    QCOMPARE(finishedSpy.count(), 1);
+    QCOMPARE(finishedSpy.at(0).at(0).toString(), QStringLiteral("100"));
+    QCOMPARE(finishedSpy.at(0).at(1).toBool(), true);
+
+    // Request 2 for "100" fails
+    monitor.requestNow("100");
+    monitor.onRequestFailed(2);
+    QCOMPARE(finishedSpy.count(), 2);
+    QCOMPARE(finishedSpy.at(1).at(0).toString(), QStringLiteral("100"));
+    QCOMPARE(finishedSpy.at(1).at(1).toBool(), false);
 }
 
 QTEST_GUILESS_MAIN(FavoriteMonitorTest)

@@ -173,7 +173,7 @@ public:
                                                    bool playbackRecovered,
                                                    bool favoriteTitleChanged = true);
     Q_INVOKABLE void refreshRoom(const QString &roomId);
-    Q_INVOKABLE void refreshLibraryLiveStatuses();
+    Q_INVOKABLE void refreshLibraryLiveStatuses(const QString &scope = QString(), bool force = false);
     Q_INVOKABLE void attachPlayer(const QString &roomId, MpvQuickItem *item);
     Q_INVOKABLE void detachPlayer(const QString &roomId, MpvQuickItem *item);
     Q_INVOKABLE void minimizeWindow();
@@ -242,6 +242,9 @@ private:
     void onFavoriteRoomUpdated(const QString &roomId,
                                const RoomMetadata &metadata,
                                RoomLiveStatus liveStatus);
+    void onLibraryRoomCheckFinished(const QString &roomId, bool success);
+    void pumpLibraryQueue();
+    void flushLibraryNotifications();
     void refreshPresentation();
     void synchronizeDanmaku();
     void touchHistory(const QString &roomId);
@@ -293,6 +296,11 @@ private:
     QVariantList maoziTeamImportSourceEntries_;
     QHash<QString, RoomLiveStatus> lastLiveStatuses_;
     QHash<QString, RoomLiveStatus> favoriteLiveStatuses_;
+    QHash<QString, qint64> libraryLastCheckedMs_;
+    QStringList libraryPendingQueue_;
+    QSet<QString> libraryActiveRequests_;
+    QTimer *libraryQueueTimer_ = nullptr;
+    QTimer *libraryNotifyTimer_ = nullptr;
     std::unique_ptr<DouyuAuthService> authService_;
     std::unique_ptr<DouyuDanmakuSender> danmakuSender_;
     int qrLoginState_ = 0;

@@ -44,6 +44,7 @@ private:
         quint64 requestId = 0;
         quint64 generation = 0;
         int failureCount = 0;
+        bool recurring = true;
     };
 
     void scheduleBase(const QString &roomId, Entry &entry);

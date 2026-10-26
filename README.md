@@ -32,12 +32,12 @@ DouyuMonitor 是基于 Qt Quick/QML、C++ 和 libmpv 的 Windows 与 Linux 多�
 
 ## 当前版本
 
-- 最新发布版本：`V0.2.25`
-- Windows 安装包：`DouyuMonitor-Setup-V0.2.25.exe`
-- Linux Debian/Ubuntu 安装包：`douyu-monitor_0.2.25_amd64.deb`
-- Linux x64 免安装绿色包：`DouyuMonitor-0.2.25-linux-x64.tar.gz`
+- 最新发布版本：`V0.2.26`
+- Windows 安装包：`DouyuMonitor-Setup-V0.2.26.exe`
+- Linux Debian/Ubuntu 安装包：`douyu-monitor_0.2.26_amd64.deb`
+- Linux x64 免安装绿色包：`DouyuMonitor-0.2.26-linux-x64.tar.gz`
 - 校验文件：`SHA256SUMS.txt`
-- 最新 Release 发布页：[DouyuMonitor V0.2.25](https://github.com/realsky-lgh/DouyuMonitor/releases/tag/v0.2.25)
+- 最新 Release 发布页：[DouyuMonitor V0.2.26](https://github.com/realsky-lgh/DouyuMonitor/releases/tag/v0.2.26)
 - 未提供商业代码签名；下载后请以 Release 页面中的 SHA-256 值校验安装包
 
 ## 功能
@@ -117,7 +117,7 @@ ctest --preset windows-x64-release
 .\scripts\build-windows-installer.ps1
 ```
 
-安装包输出到 `native/out/installer/DouyuMonitor-Setup-V0.2.25.exe`。后续版本会自动将版本号加入安装包文件名。构建 24 路全解码测试版时执行 `.\scripts\build-windows-installer.ps1 -ReleaseDir .\out\build\windows-x64-beta24 -Version 0.2.25-beta.24`。运行安装包时可选择安装目录；如果选择 `D:\` 这样的磁盘根目录，安装器会自动使用 `D:\DouyuMonitor`，不会把程序文件直接写入根目录。安装完成后会创建开始菜单和可选的桌面快捷方式，并可直接启动程序。卸载入口由 Inno Setup 生成的 `unins000.exe` 提供，同时登记到 Windows 设置的“已安装的应用”。
+安装包输出到 `native/out/installer/DouyuMonitor-Setup-V0.2.26.exe`。后续版本会自动将版本号加入安装包文件名。构建 24 路全解码测试版时执行 `.\scripts\build-windows-installer.ps1 -ReleaseDir .\out\build\windows-x64-beta24 -Version 0.2.26-beta.24`。运行安装包时可选择安装目录；如果选择 `D:\` 这样的磁盘根目录，安装器会自动使用 `D:\DouyuMonitor`，不会把程序文件直接写入根目录。安装完成后会创建开始菜单和可选的桌面快捷方式，并可直接启动程序。卸载入口由 Inno Setup 生成的 `unins000.exe` 提供，同时登记到 Windows 设置的“已安装的应用”。
 
 ### Linux 平台构建与打包
 
@@ -136,8 +136,8 @@ bash native/scripts/build-linux-packages.sh
 ```
 
 生成的安装包位于 `out/packages/`：
-- `douyu-monitor_0.2.25_amd64.deb`
-- `DouyuMonitor-0.2.25-linux-x64.tar.gz`
+- `douyu-monitor_0.2.26_amd64.deb`
+- `DouyuMonitor-0.2.26-linux-x64.tar.gz`
 
 本机快捷安装（包含桌面图标与启动项集成）：
 

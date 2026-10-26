@@ -38,6 +38,7 @@ public:
 signals:
     void eventsReady(QVector<NotificationEvent> events);
     void roomUpdated(QString roomId, RoomMetadata metadata, RoomLiveStatus liveStatus);
+    void roomCheckFinished(QString roomId, bool success);
 
 private:
     struct State {
