@@ -632,6 +632,7 @@ private slots:
     void showsDanmakuStatusOnRoomTile();
     void rendersRoomAvatarFromModelRole();
     void placesSidebarToggleBeforeBrandAndOpensHistory();
+    void defersLibraryUpdatesWhileInteracting();
     void placesNavigationEntryAfterSidebarToggleAndBeforeBrand();
     void makesRoomListAndNavigationPanelsMutuallyExclusive();
     void closesToastFromQml();
@@ -1816,6 +1817,59 @@ void QmlInteractionTest::placesSidebarToggleBeforeBrandAndOpensHistory()
     QObject *libraryView = window->findChild<QObject *>(QStringLiteral("roomLibraryView"));
     QVERIFY(libraryView != nullptr);
     QTRY_VERIFY(libraryView->property("visible").toBool());
+}
+
+void QmlInteractionTest::defersLibraryUpdatesWhileInteracting()
+{
+    registerQmlTypes();
+    QQmlApplicationEngine engine;
+    QQmlComponent component(&engine, QUrl(QStringLiteral("qrc:/qml/components/RoomLibraryView.qml")));
+    QVERIFY2(component.isReady(), qPrintable(component.errorString()));
+
+    std::unique_ptr<QObject> view(component.create());
+    QVERIFY(view != nullptr);
+
+    QCOMPARE(view->property("isInteracting").toBool(), false);
+    QCOMPARE(view->property("pendingRebuild").toBool(), false);
+
+    QVariantList initialRooms{
+        QVariantMap{
+            {QStringLiteral("roomId"), QStringLiteral("101")},
+            {QStringLiteral("anchorName"), QStringLiteral("主播A")},
+            {QStringLiteral("title"), QStringLiteral("标题A")},
+            {QStringLiteral("online"), false},
+            {QStringLiteral("favorite"), true},
+            {QStringLiteral("lastOpenedAtMs"), qint64(1000)}
+        }
+    };
+    view->setProperty("libraryRooms", initialRooms);
+    QCOMPARE(view->property("pendingRebuild").toBool(), false);
+    QCOMPARE(view->property("visibleRooms").toList().size(), 1);
+
+    // Simulate user interaction (scrolling / flicking / touching list)
+    QVERIFY(QMetaObject::invokeMethod(view.get(), "noteUserInteracting"));
+    QCOMPARE(view->property("isInteracting").toBool(), true);
+
+    // When rooms update during interaction, it must defer rebuild
+    QVariantList updatedRooms = initialRooms;
+    updatedRooms.append(QVariantMap{
+        {QStringLiteral("roomId"), QStringLiteral("102")},
+        {QStringLiteral("anchorName"), QStringLiteral("主播B")},
+        {QStringLiteral("title"), QStringLiteral("标题B")},
+        {QStringLiteral("online"), true},
+        {QStringLiteral("favorite"), true},
+        {QStringLiteral("lastOpenedAtMs"), qint64(2000)}
+    });
+    view->setProperty("libraryRooms", updatedRooms);
+
+    // Rebuild is deferred while interacting
+    QCOMPARE(view->property("pendingRebuild").toBool(), true);
+    QCOMPARE(view->property("visibleRooms").toList().size(), 1);
+
+    // Explicit forceRebuild immediately applies changes
+    QVERIFY(QMetaObject::invokeMethod(view.get(), "forceRebuild"));
+    QCOMPARE(view->property("pendingRebuild").toBool(), false);
+    QCOMPARE(view->property("visibleRooms").toList().size(), 2);
 }
 
 void QmlInteractionTest::placesNavigationEntryAfterSidebarToggleAndBeforeBrand()

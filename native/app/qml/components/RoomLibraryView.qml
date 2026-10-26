@@ -15,6 +15,32 @@ Item {
     property color textColor: Theme.text
     property color mutedTextColor: Theme.mutedText
 
+    property bool pendingRebuild: false
+    readonly property bool isScrolling: historyList.moving || historyList.flicking || historyList.dragging || (vScrollBar && vScrollBar.pressed)
+    readonly property bool isInteracting: isScrolling || interactionCooldownTimer.running
+
+    Timer {
+        id: interactionCooldownTimer
+        interval: 1500
+        repeat: false
+        onTriggered: {
+            if (root.pendingRebuild && !root.isScrolling) {
+                root.rebuildVisibleRooms()
+                root.pendingRebuild = false
+            }
+        }
+    }
+
+    function noteUserInteracting() {
+        interactionCooldownTimer.restart()
+    }
+
+    function forceRebuild() {
+        interactionCooldownTimer.stop()
+        root.pendingRebuild = false
+        root.rebuildVisibleRooms()
+    }
+
     function openedLabel(timestamp) {
         if (!timestamp || timestamp <= 0) return "未打开"
         return Qt.formatDateTime(new Date(timestamp), "MM-dd hh:mm")
@@ -36,8 +62,22 @@ Item {
         root.visibleRooms = result
     }
 
-    onLibraryRoomsChanged: rebuildVisibleRooms()
-    onFavoritesOnlyChanged: rebuildVisibleRooms()
+    onLibraryRoomsChanged: {
+        if (root.isInteracting) {
+            root.pendingRebuild = true
+            return
+        }
+        rebuildVisibleRooms()
+    }
+    onFavoritesOnlyChanged: forceRebuild()
+    onVisibleChanged: {
+        if (visible) {
+            forceRebuild()
+        } else {
+            interactionCooldownTimer.stop()
+            pendingRebuild = false
+        }
+    }
     Component.onCompleted: rebuildVisibleRooms()
 
     ListView {
@@ -50,7 +90,29 @@ Item {
         rightMargin: 8
         topMargin: 8
         bottomMargin: 8
-        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+        ScrollBar.vertical: ScrollBar {
+            id: vScrollBar
+            policy: ScrollBar.AsNeeded
+            onPressedChanged: {
+                if (pressed) {
+                    root.noteUserInteracting()
+                }
+            }
+        }
+
+        onMovementStarted: root.noteUserInteracting()
+        onMovementEnded: root.noteUserInteracting()
+        onFlickStarted: root.noteUserInteracting()
+        onFlickEnded: root.noteUserInteracting()
+        onMovingChanged: if (moving) root.noteUserInteracting()
+        onDraggingChanged: if (dragging) root.noteUserInteracting()
+        onContentYChanged: if (moving || flicking || dragging || (vScrollBar && vScrollBar.pressed)) root.noteUserInteracting()
+
+        WheelHandler {
+            onWheel: (event) => {
+                root.noteUserInteracting()
+            }
+        }
 
         delegate: Item {
             id: roomRow
@@ -165,7 +227,10 @@ Item {
                     Accessible.name: "打开房间"
                     ToolTip.visible: hovered
                     ToolTip.text: Accessible.name
-                    onClicked: root.controller.addRoom(entry.roomId)
+                    onClicked: {
+                        root.controller.addRoom(entry.roomId)
+                        root.forceRebuild()
+                    }
                     contentItem: Image { anchors.centerIn: parent; width: 16; height: 16; source: Qt.resolvedUrl("../assets/icons/plus.svg"); opacity: parent.enabled ? 1 : 0.35 }
                     background: Rectangle {
                         radius: Theme.radiusSmall
@@ -176,7 +241,6 @@ Item {
                 ToolButton {
                     objectName: "removeHistoryButton"
                     anchors.right: parent.right
-                    anchors.rightMargin: 31
                     anchors.verticalCenter: parent.verticalCenter
                     width: 27
                     height: 27
@@ -185,7 +249,10 @@ Item {
                     Accessible.name: "删除历史记录"
                     ToolTip.visible: hovered
                     ToolTip.text: Accessible.name
-                    onClicked: root.controller.removeHistoryRoom(entry.roomId)
+                    onClicked: {
+                        root.controller.removeHistoryRoom(entry.roomId)
+                        root.forceRebuild()
+                    }
                     contentItem: Image { anchors.centerIn: parent; width: 16; height: 16; source: Qt.resolvedUrl("../assets/icons/x.svg"); opacity: parent.enabled ? 1 : 0.62 }
                     background: Rectangle {
                         radius: Theme.radiusSmall
@@ -199,6 +266,11 @@ Item {
                 anchors.fill: parent
                 hoverEnabled: true
                 acceptedButtons: Qt.NoButton
+                onContainsMouseChanged: {
+                    if (containsMouse) {
+                        root.noteUserInteracting()
+                    }
+                }
             }
         }
 

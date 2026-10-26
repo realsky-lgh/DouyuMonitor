@@ -106,10 +106,10 @@ native/out/build/windows-x64-release/douyu_monitor_native.exe
 输出文件：
 
 ```text
-native/out/installer/DouyuMonitor-Setup-V0.2.24.exe
+native/out/installer/DouyuMonitor-Setup-V0.2.25.exe
 ```
 
-安装器使用 Inno Setup 6。正式版安装包名为 `DouyuMonitor-Setup-V0.2.24.exe`；24 路全解码测试版使用 `-Version 0.2.24-beta.24` 生成独立文件名。安装时可选择目标目录；选择 `D:\` 等磁盘根目录时会自动归一化到 `D:\DouyuMonitor`。安装完成后创建开始菜单和可选的桌面快捷方式，并登记到 Windows 设置的“已安装的应用”。安装目录中的 `unins000.exe` 是标准卸载入口。运行时载荷校验会拒绝测试程序、构建残留以及 Electron、Chromium、Node、Qt WebEngine 文件。
+安装器使用 Inno Setup 6。正式版安装包名为 `DouyuMonitor-Setup-V0.2.25.exe`；24 路全解码测试版使用 `-Version 0.2.25-beta.24` 生成独立文件名。安装时可选择目标目录；选择 `D:\` 等磁盘根目录时会自动归一化到 `D:\DouyuMonitor`。安装完成后创建开始菜单和可选的桌面快捷方式，并登记到 Windows 设置的“已安装的应用”。安装目录中的 `unins000.exe` 是标准卸载入口。运行时载荷校验会拒绝测试程序、构建残留以及 Electron、Chromium、Node、Qt WebEngine 文件。
 
 构建 Linux 安装包：
 
@@ -118,8 +118,8 @@ bash scripts/build-linux-packages.sh
 ```
 
 输出文件位于 `out/packages/`：
-- `douyu-monitor_0.2.24_amd64.deb`
-- `DouyuMonitor-0.2.24-linux-x64.tar.gz`
+- `douyu-monitor_0.2.25_amd64.deb`
+- `DouyuMonitor-0.2.25-linux-x64.tar.gz`
 
 安装器脚本回归检查：
 
