@@ -8,6 +8,8 @@
 #include <QNetworkCookieJar>
 #include <QNetworkCookie>
 
+#include <functional>
+
 enum class DouyuQrLoginState {
     Idle,
     Generating,
@@ -36,7 +38,8 @@ public:
     explicit DouyuAuthService(QNetworkAccessManager *nam = nullptr, QObject *parent = nullptr);
     ~DouyuAuthService() override;
 
-    bool isLoggedIn() const { return session_.isValid(); }
+    bool isLoggedIn() const { return !isSessionExpired_ && session_.isValid(); }
+    bool isSessionExpired() const { return isSessionExpired_; }
     const DouyuUserSession &session() const { return session_; }
 
     QString uid() const { return session_.uid; }
@@ -51,16 +54,20 @@ public:
     void loadSession();
     void saveSession();
     void clearSession();
+    void validateSession(std::function<void(bool valid)> callback = nullptr);
+    void markSessionExpired(const QString &reason = QString());
     void setSessionFilePath(const QString &filePath) { sessionFilePath_ = filePath; }
     QString sessionFilePath() const;
 
 signals:
     void qrStateChanged(DouyuQrLoginState state, const QString &qrUrl, const QString &statusText);
     void loginStateChanged(bool loggedIn);
+    void sessionExpired(const QString &reason);
     void userProfileChanged(const QString &uid, const QString &nickname, const QString &avatarUrl);
 
 private slots:
     void onPollTimerTick();
+    void onValidationTimerTick();
 
 private:
     void requestGenerateCode();
@@ -71,6 +78,7 @@ private:
     QNetworkAccessManager *nam_ = nullptr;
     bool ownsNam_ = false;
     QTimer *pollTimer_ = nullptr;
+    QTimer *validationTimer_ = nullptr;
 
     DouyuQrLoginState currentState_ = DouyuQrLoginState::Idle;
     QString currentQrUrl_;
@@ -79,4 +87,5 @@ private:
 
     DouyuUserSession session_;
     QString sessionFilePath_;
+    bool isSessionExpired_ = false;
 };

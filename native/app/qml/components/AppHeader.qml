@@ -148,8 +148,12 @@ Rectangle {
             id: userLoginButton
             objectName: "userLoginButton"
             height: Theme.controlHeight
-            implicitWidth: (root.controller && root.controller.isLoggedIn) ? Math.max(90, userRow.implicitWidth + 16) : 74
-            Accessible.name: (root.controller && root.controller.isLoggedIn) ? ("斗鱼账号: " + root.controller.loginNickname) : "登录斗鱼"
+            implicitWidth: (root.controller && root.controller.isLoggedIn)
+                           ? Math.max(90, userRow.implicitWidth + 16)
+                           : ((root.controller && root.controller.isSessionExpired) ? 108 : 74)
+            Accessible.name: (root.controller && root.controller.isLoggedIn)
+                             ? ("斗鱼账号: " + root.controller.loginNickname)
+                             : ((root.controller && root.controller.isSessionExpired) ? "登录已过期，点击重新扫码" : "登录斗鱼")
             ToolTip.visible: hovered
             ToolTip.text: Accessible.name
             onClicked: {
@@ -219,8 +223,8 @@ Rectangle {
                     }
 
                     Text {
-                        text: "登录"
-                        color: Theme.accent
+                        text: (root.controller && root.controller.isSessionExpired) ? "登录已过期" : "登录"
+                        color: (root.controller && root.controller.isSessionExpired) ? Theme.warning : Theme.accent
                         font.bold: true
                         font.pixelSize: 12
                         anchors.verticalCenter: parent.verticalCenter
@@ -230,7 +234,7 @@ Rectangle {
             background: Rectangle {
                 radius: Theme.radiusSmall
                 color: parent.down ? Theme.well : (parent.hovered ? Theme.controlSurface : "transparent")
-                border.color: (root.controller && root.controller.isLoggedIn) ? Theme.border : Theme.accent
+                border.color: (root.controller && root.controller.isLoggedIn) ? Theme.border : ((root.controller && root.controller.isSessionExpired) ? Theme.warning : Theme.accent)
                 border.width: 1
             }
         }
@@ -555,6 +559,27 @@ Rectangle {
                 leftPadding: 12
                 font.pixelSize: 11
                 verticalAlignment: Text.AlignVCenter
+            }
+        }
+
+        MenuItem {
+            text: "重新扫码登录"
+            onTriggered: {
+                if (root.controller) {
+                    root.controller.startQrLogin()
+                    root.openLogin()
+                }
+            }
+            contentItem: Text {
+                text: parent.text
+                color: Theme.accent
+                leftPadding: 12
+                font.pixelSize: 13
+                verticalAlignment: Text.AlignVCenter
+            }
+            background: Rectangle {
+                color: parent.highlighted ? Theme.well : "transparent"
+                radius: Theme.radiusSmall
             }
         }
 

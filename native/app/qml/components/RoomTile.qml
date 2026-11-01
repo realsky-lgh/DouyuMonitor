@@ -888,7 +888,16 @@ FocusScope {
                         root.lastPendingDanmaku = ""
                     }
                 } else {
+                    root.revealControls()
                     danmakuStatusBubble.showMessage("✕ " + (errorMessage ? errorMessage : "发送失败"), "error")
+                    if (danmakuTextField.text === "" && root.lastPendingDanmaku.length > 0) {
+                        danmakuTextField.text = root.lastPendingDanmaku
+                    }
+                    if (errorMessage && (errorMessage.indexOf("登录") !== -1 || errorMessage.indexOf("失效") !== -1)) {
+                        if (root.controller) {
+                            root.controller.startQrLogin()
+                        }
+                    }
                     root.lastPendingDanmaku = ""
                 }
             }

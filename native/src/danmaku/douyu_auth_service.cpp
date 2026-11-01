@@ -18,6 +18,7 @@ const QString kCheckScanUrl = QStringLiteral("https://passport.douyu.com/lapi/pa
 const QString kReferer = QStringLiteral("https://passport.douyu.com/index/login");
 const QString kUserAgent = QStringLiteral("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
 constexpr int kPollIntervalMs = 1500;
+constexpr int kValidationIntervalMs = 20 * 60 * 1000; // 20 minutes
 } // namespace
 
 DouyuAuthService::DouyuAuthService(QNetworkAccessManager *nam, QObject *parent)
@@ -34,6 +35,10 @@ DouyuAuthService::DouyuAuthService(QNetworkAccessManager *nam, QObject *parent)
     pollTimer_ = new QTimer(this);
     pollTimer_->setInterval(kPollIntervalMs);
     connect(pollTimer_, &QTimer::timeout, this, &DouyuAuthService::onPollTimerTick);
+
+    validationTimer_ = new QTimer(this);
+    validationTimer_->setInterval(kValidationIntervalMs);
+    connect(validationTimer_, &QTimer::timeout, this, &DouyuAuthService::onValidationTimerTick);
 }
 
 DouyuAuthService::~DouyuAuthService()
@@ -41,11 +46,15 @@ DouyuAuthService::~DouyuAuthService()
     if (pollTimer_) {
         pollTimer_->stop();
     }
+    if (validationTimer_) {
+        validationTimer_->stop();
+    }
 }
 
 void DouyuAuthService::startQrLogin()
 {
     cancelQrLogin();
+    isSessionExpired_ = false;
     currentState_ = DouyuQrLoginState::Generating;
     emit qrStateChanged(currentState_, QString(), QStringLiteral("正在获取二维码..."));
     requestGenerateCode();
@@ -65,6 +74,10 @@ void DouyuAuthService::cancelQrLogin()
 void DouyuAuthService::logout()
 {
     cancelQrLogin();
+    if (validationTimer_) {
+        validationTimer_->stop();
+    }
+    isSessionExpired_ = false;
     clearSession();
     session_ = DouyuUserSession{};
     if (nam_ && nam_->cookieJar()) {
@@ -160,8 +173,13 @@ void DouyuAuthService::loadSession()
         }
 
         currentState_ = DouyuQrLoginState::Success;
+        isSessionExpired_ = false;
+        if (validationTimer_) {
+            validationTimer_->start();
+        }
         emit loginStateChanged(true);
         emit userProfileChanged(session_.uid, session_.nickname, session_.avatarUrl);
+        validateSession();
     }
 }
 
@@ -444,6 +462,10 @@ void DouyuAuthService::parseCookies(const QStringList &rawCookies)
 
     if (session_.isValid()) {
         currentState_ = DouyuQrLoginState::Success;
+        isSessionExpired_ = false;
+        if (validationTimer_) {
+            validationTimer_->start();
+        }
         saveSession();
         emit loginStateChanged(true);
         emit userProfileChanged(session_.uid, session_.nickname, session_.avatarUrl);
@@ -451,4 +473,72 @@ void DouyuAuthService::parseCookies(const QStringList &rawCookies)
         currentState_ = DouyuQrLoginState::Failed;
         emit qrStateChanged(currentState_, currentQrUrl_, QStringLiteral("获取登录凭据失败，请重试"));
     }
+}
+
+void DouyuAuthService::onValidationTimerTick()
+{
+    if (isLoggedIn()) {
+        validateSession();
+    }
+}
+
+void DouyuAuthService::validateSession(std::function<void(bool valid)> callback)
+{
+    if (!session_.isValid() || isSessionExpired_) {
+        if (callback) callback(false);
+        return;
+    }
+
+    const QUrl validateUrl(QStringLiteral("https://www.douyu.com/wgapi/livenc/liveweb/follow/list"));
+    QNetworkRequest request(validateUrl);
+    request.setRawHeader("User-Agent", kUserAgent.toUtf8());
+    request.setRawHeader("Referer", QStringLiteral("https://www.douyu.com").toUtf8());
+
+    QStringList cookieParts;
+    for (auto it = session_.cookies.cbegin(); it != session_.cookies.cend(); ++it) {
+        cookieParts.append(QStringLiteral("%1=%2").arg(it.key(), it.value()));
+    }
+    request.setRawHeader("Cookie", cookieParts.join(QStringLiteral("; ")).toUtf8());
+
+    QNetworkReply *reply = nam_->get(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, callback]() {
+        reply->deleteLater();
+        if (reply->error() != QNetworkReply::NoError) {
+            // 网络异常或断网时不做失效判定，避免误退登
+            if (callback) callback(true);
+            return;
+        }
+
+        const QByteArray body = reply->readAll();
+        const QJsonDocument doc = QJsonDocument::fromJson(body);
+        if (doc.isObject()) {
+            const QJsonObject root = doc.object();
+            const int code = root.value(QStringLiteral("code")).toInt(root.value(QStringLiteral("error")).toInt(0));
+            const QString msg = root.value(QStringLiteral("msg")).toString();
+
+            if (code != 0 || msg.contains(QStringLiteral("未登陆")) || msg.contains(QStringLiteral("过期"))) {
+                markSessionExpired(QStringLiteral("登录凭证已过期，请重新扫码登录"));
+                if (callback) callback(false);
+                return;
+            }
+        }
+        if (callback) callback(true);
+    });
+}
+
+void DouyuAuthService::markSessionExpired(const QString &reason)
+{
+    if (isSessionExpired_) {
+        return;
+    }
+    isSessionExpired_ = true;
+    if (validationTimer_) {
+        validationTimer_->stop();
+    }
+    clearSession();
+    session_.cookies.clear();
+
+    emit sessionExpired(reason);
+    emit loginStateChanged(false);
+    emit userProfileChanged(session_.uid, session_.nickname, session_.avatarUrl);
 }

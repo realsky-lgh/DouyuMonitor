@@ -63,6 +63,7 @@ class AppController final : public QObject {
     Q_PROPERTY(bool workspaceUnsaved READ workspaceUnsaved NOTIFY workspaceSaveStateChanged)
     Q_PROPERTY(QString eventMappingJson READ eventMappingJson NOTIFY eventMappingChanged)
     Q_PROPERTY(bool isLoggedIn READ isLoggedIn NOTIFY authChanged)
+    Q_PROPERTY(bool isSessionExpired READ isSessionExpired NOTIFY authChanged)
     Q_PROPERTY(QString loginNickname READ loginNickname NOTIFY authChanged)
     Q_PROPERTY(QString loginAvatarUrl READ loginAvatarUrl NOTIFY authChanged)
     Q_PROPERTY(QString loginUid READ loginUid NOTIFY authChanged)
@@ -193,6 +194,7 @@ public:
     Q_INVOKABLE void shutdown();
 
     bool isLoggedIn() const noexcept;
+    bool isSessionExpired() const noexcept;
     QString loginNickname() const;
     QString loginAvatarUrl() const;
     QString loginUid() const;

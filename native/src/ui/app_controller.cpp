@@ -327,10 +327,23 @@ AppController::AppController(QString serviceProgram,
     connect(authService_.get(), &DouyuAuthService::loginStateChanged, this, [this] {
         emit authChanged();
     });
+    connect(authService_.get(), &DouyuAuthService::sessionExpired, this, [this](const QString &reason) {
+        if (workspace_) {
+            workspace_->setLastMessage(reason.isEmpty() ? QStringLiteral("斗鱼登录凭证已过期，请重新登录") : reason, QStringLiteral("warning"), 5000);
+        }
+        emit authChanged();
+    });
     connect(authService_.get(), &DouyuAuthService::userProfileChanged, this, [this] {
         emit authChanged();
     });
-    connect(danmakuSender_.get(), &DouyuDanmakuSender::danmakuSent, this, &AppController::danmakuSendResult);
+    connect(danmakuSender_.get(), &DouyuDanmakuSender::danmakuSent, this, [this](const QString &roomId, bool success, const QString &errorMessage) {
+        if (!success && authService_) {
+            if (errorMessage.contains(QStringLiteral("登录凭证已失效")) || errorMessage.contains(QStringLiteral("未登录"))) {
+                authService_->markSessionExpired(errorMessage);
+            }
+        }
+        emit danmakuSendResult(roomId, success, errorMessage);
+    });
 
     authService_->loadSession();
 }
@@ -2197,6 +2210,11 @@ bool AppController::isValidName(const QString &name) noexcept
 bool AppController::isLoggedIn() const noexcept
 {
     return authService_ && authService_->isLoggedIn();
+}
+
+bool AppController::isSessionExpired() const noexcept
+{
+    return authService_ && authService_->isSessionExpired();
 }
 
 QString AppController::loginNickname() const

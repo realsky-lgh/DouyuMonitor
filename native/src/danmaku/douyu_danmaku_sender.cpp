@@ -148,6 +148,12 @@ void DouyuDanmakuSender::connectAndSend(std::shared_ptr<PendingTask> task, const
             const QString type = fields.value(QStringLiteral("type"));
 
             if (type == QLatin1String("loginres")) {
+                const QString userid = fields.value(QStringLiteral("userid"));
+                if (!task->session.uid.isEmpty() && fields.contains(QStringLiteral("userid")) &&
+                    (userid == QLatin1String("0") || userid.isEmpty())) {
+                    finishTask(task, false, QStringLiteral("登录凭证已失效（服务器未认证身份），请重新扫码登录"));
+                    return;
+                }
                 if (!task->sentChat) {
                     const QMap<QString, QString> joinFields = {
                         {QStringLiteral("type"), QStringLiteral("joingroup")},
@@ -184,6 +190,12 @@ void DouyuDanmakuSender::connectAndSend(std::shared_ptr<PendingTask> task, const
                 if (resVal == QLatin1String("0")) {
                     finishTask(task, true, QString());
                     return;
+                } else if (resVal == QLatin1String("-1") || resVal == QLatin1String("1") || resVal == QLatin1String("301") || resVal == QLatin1String("302")) {
+                    finishTask(task, false, QStringLiteral("登录凭证已失效，请重新扫码登录"));
+                    return;
+                } else if (resVal == QLatin1String("51")) {
+                    finishTask(task, false, QStringLiteral("您在此房间无发言权限或已被禁言"));
+                    return;
                 } else {
                     finishTask(task, false, QStringLiteral("发送失败（错误代码: %1）").arg(resVal));
                     return;
@@ -199,7 +211,7 @@ void DouyuDanmakuSender::connectAndSend(std::shared_ptr<PendingTask> task, const
                     msg = QStringLiteral("发言太快，请稍后再试");
                 } else if (code == QLatin1String("50")) {
                     msg = QStringLiteral("该房间开启了发言限制（如等级或粉丝牌）");
-                } else if (code == QLatin1String("301") || code == QLatin1String("302")) {
+                } else if (code == QLatin1String("301") || code == QLatin1String("302") || code == QLatin1String("300") || code == QLatin1String("303")) {
                     msg = QStringLiteral("登录凭证已失效，请重新扫码登录");
                 }
                 finishTask(task, false, msg);

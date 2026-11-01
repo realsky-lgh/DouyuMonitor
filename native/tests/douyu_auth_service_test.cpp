@@ -9,6 +9,7 @@ private slots:
     void initialStateIsUnauthenticated();
     void cancelResetsToIdle();
     void logoutClearsSession();
+    void markSessionExpiredUpdatesLoginStateAndEmitsSignal();
     void sessionSaveAndLoadPersistence();
     void qrCodeImageProviderGeneratesValidImage();
 };
@@ -76,6 +77,47 @@ void DouyuAuthServiceTest::logoutClearsSession()
     DouyuAuthService auth;
     auth.logout();
     QVERIFY(!auth.isLoggedIn());
+}
+
+void DouyuAuthServiceTest::markSessionExpiredUpdatesLoginStateAndEmitsSignal()
+{
+    QTemporaryDir tempDir;
+    QVERIFY(tempDir.isValid());
+    const QString sessionFile = tempDir.filePath(QStringLiteral("test_auth_expired.json"));
+
+    {
+        QJsonObject obj;
+        obj[QStringLiteral("uid")] = QStringLiteral("888888");
+        obj[QStringLiteral("nickname")] = QStringLiteral("测试过期用户");
+        obj[QStringLiteral("timestamp")] = QDateTime::currentSecsSinceEpoch();
+        QJsonObject cookies;
+        cookies[QStringLiteral("acf_uid")] = QStringLiteral("888888");
+        cookies[QStringLiteral("acf_auth")] = QStringLiteral("token_expired");
+        obj[QStringLiteral("cookies")] = cookies;
+
+        QFile file(sessionFile);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write(QJsonDocument(obj).toJson());
+        file.close();
+    }
+
+    DouyuAuthService auth;
+    auth.setSessionFilePath(sessionFile);
+    auth.loadSession();
+    QVERIFY(auth.isLoggedIn());
+    QVERIFY(!auth.isSessionExpired());
+
+    QSignalSpy expiredSpy(&auth, &DouyuAuthService::sessionExpired);
+    QSignalSpy loginSpy(&auth, &DouyuAuthService::loginStateChanged);
+
+    auth.markSessionExpired(QStringLiteral("凭证已失效"));
+
+    QCOMPARE(expiredSpy.count(), 1);
+    QCOMPARE(loginSpy.count(), 1);
+    QCOMPARE(loginSpy.at(0).at(0).toBool(), false);
+    QVERIFY(!auth.isLoggedIn());
+    QVERIFY(auth.isSessionExpired());
+    QVERIFY(!QFile::exists(sessionFile));
 }
 
 void DouyuAuthServiceTest::qrCodeImageProviderGeneratesValidImage()
