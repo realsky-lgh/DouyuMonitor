@@ -2220,7 +2220,7 @@ void QmlInteractionTest::doubleClicksOnlyRoomPictureForFullscreen()
     std::unique_ptr<QObject> tile(component.createWithInitialProperties(properties));
     QVERIFY2(tile != nullptr, qPrintable(component.errorString()));
     QVERIFY(QTest::qWaitForWindowExposed(&window));
-    QSignalSpy fullscreen(tile.get(), SIGNAL(fullScreenToggleRequested()));
+    QSignalSpy fullscreen(tile.get(), SIGNAL(fullScreenToggleRequested(QString)));
     QVERIFY(fullscreen.isValid());
     const QPoint pictureCenter(320, 200);
     QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, pictureCenter);

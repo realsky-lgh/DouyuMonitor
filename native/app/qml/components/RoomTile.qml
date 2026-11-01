@@ -150,6 +150,19 @@ FocusScope {
             }
         }
 
+        MouseArea {
+            id: roomPictureDoubleClickArea
+            objectName: "roomPictureDoubleClickArea"
+            anchors.fill: parent
+            anchors.topMargin: topBar.height
+            anchors.bottomMargin: bottomBar.visible ? (bottomBar.height + (danmakuInputBar.visible ? (danmakuInputBar.height + 6) : 0)) : 0
+            enabled: !root.menuOpen && !qualityBox.popup.visible
+                     && !pictureDoubleClickGuard.running
+            acceptedButtons: Qt.LeftButton
+            onDoubleClicked: root.fullScreenToggleRequested(root.roomId)
+            z: 1
+        }
+
         DanmakuOverlay {
             id: roomDanmakuOverlay
             anchors.fill: parent
@@ -160,6 +173,7 @@ FocusScope {
                      && root.controller.danmaku.globalEnabled
             topInset: topBar.height
             bottomInset: bottomBar.visible ? bottomBar.height : 0
+            z: 2
         }
 
         Rectangle {
@@ -834,17 +848,6 @@ FocusScope {
             }
         }
 
-    }
-
-    MouseArea {
-        objectName: "roomPictureDoubleClickArea"
-        anchors.fill: parent
-        anchors.topMargin: topBar.height
-        anchors.bottomMargin: bottomBar.visible ? (bottomBar.height + (danmakuInputBar.visible ? (danmakuInputBar.height + 6) : 0)) : 0
-        enabled: !root.menuOpen && !qualityBox.popup.visible
-                 && !pictureDoubleClickGuard.running
-        acceptedButtons: Qt.LeftButton
-        onDoubleClicked: root.fullScreenToggleRequested(root.roomId)
     }
 
     HoverHandler {

@@ -268,15 +268,19 @@ Item {
         }
     }
 
-    XAnimator {
-        id: moveAnimator
+    property bool forcePaused: false
+
+    NumberAnimation {
+        id: moveAnimation
+        objectName: "moveAnimation"
         target: root
+        property: "x"
         from: root.containerWidth
         to: -root.width
         duration: root.durationMs
         easing.type: Easing.Linear
         running: true
-        paused: lineMouseArea.containsMouse || danmakuMenu.visible
+        paused: lineMouseArea.containsMouse || danmakuMenu.visible || root.forcePaused
         onFinished: root.finished()
     }
 }

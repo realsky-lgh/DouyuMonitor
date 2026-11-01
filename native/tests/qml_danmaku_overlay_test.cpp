@@ -151,6 +151,7 @@ private slots:
     void rendersColoredAndNobleDanmaku();
     void rendersFansAndRoomAdminBadges();
     void blocksAndCopiesDanmakuFromContextMenu();
+    void hoverPausesDanmakuAnimation();
 };
 
 void QmlDanmakuOverlayTest::pausesHiddenOverlayWithoutConsumingQueuedMessages()
@@ -403,6 +404,43 @@ void QmlDanmakuOverlayTest::blocksAndCopiesDanmakuFromContextMenu()
 
     // After blocking, the line should be removed from active items
     QTRY_COMPARE_WITH_TIMEOUT(activeLines(overlay.get()).size(), 0, 1000);
+}
+
+void QmlDanmakuOverlayTest::hoverPausesDanmakuAnimation()
+{
+    QQmlEngine engine;
+    QQuickWindow window;
+    window.resize(400, 200);
+    window.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+
+    FakeDanmakuQmlController controller;
+    controller.enqueue(message(QStringLiteral("m1"), QStringLiteral("测试悬停暂停弹幕")));
+    std::unique_ptr<QQuickItem> overlay(createOverlay(engine, window, controller));
+    QVERIFY(overlay != nullptr);
+
+    QTRY_VERIFY_WITH_TIMEOUT(activeLines(overlay.get()).size() >= 1, 1500);
+    QObject *line = activeLines(overlay.get()).constFirst();
+
+    QObject *moveAnim = line->findChild<QObject *>(QStringLiteral("moveAnimation"));
+    QVERIFY(moveAnim != nullptr);
+    QCOMPARE(moveAnim->property("running").toBool(), true);
+    QCOMPARE(moveAnim->property("paused").toBool(), false);
+
+    // Verify pausing with forcePaused or menu visibility
+    line->setProperty("forcePaused", true);
+    QCOMPARE(moveAnim->property("paused").toBool(), true);
+
+    line->setProperty("forcePaused", false);
+    QCOMPARE(moveAnim->property("paused").toBool(), false);
+
+    // Verify pausing when menu opens
+    QObject *menu = line->findChild<QObject *>(QStringLiteral("danmakuContextMenu"));
+    QVERIFY(menu != nullptr);
+    menu->setProperty("visible", true);
+    QCOMPARE(moveAnim->property("paused").toBool(), true);
+    menu->setProperty("visible", false);
+    QCOMPARE(moveAnim->property("paused").toBool(), false);
 }
 
 QTEST_MAIN(QmlDanmakuOverlayTest)
