@@ -96,6 +96,7 @@ private slots:
     void closeDialogHasNonOverlappingRememberRow();
     void cancelCloseDialogLeavesControllerStateUnchanged();
     void nativeMinimizeRestoreKeepsControllerInSync();
+    void clicksMinimizeButtonOnWindowControls();
     void doubleClicksRoomPictureToToggleFullscreen();
     void maximizesAndRestoresAfterFullscreen();
 };
@@ -253,6 +254,33 @@ void QmlCloseRegressionTest::nativeMinimizeRestoreKeepsControllerInSync()
 #else
     QSKIP("native taskbar window state is Windows-only");
 #endif
+}
+
+void QmlCloseRegressionTest::clicksMinimizeButtonOnWindowControls()
+{
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    QSettings settings(directory.filePath(QStringLiteral("workspace.ini")), QSettings::IniFormat);
+    AppController controller(fakeServicePath(), &settings);
+    QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
+    QQmlApplicationEngine engine;
+    QQuickWindow *window = loadWindowWithFakeRooms(engine, controller, 0);
+    QVERIFY(window != nullptr);
+    QVERIFY(QTest::qWaitForWindowExposed(window));
+
+    QObject *minBtn = window->findChild<QObject *>(QStringLiteral("minimizeButton"));
+    QVERIFY(minBtn != nullptr);
+    QCOMPARE(controller.windowMinimized(), false);
+
+    QVERIFY(QMetaObject::invokeMethod(minBtn, "clicked"));
+    QCOMPARE(controller.windowMinimized(), true);
+
+    // Wait past debounce timer to ensure window does not spuriously un-minimize
+    QTest::qWait(400);
+    QCOMPARE(controller.windowMinimized(), true);
+
+    controller.restoreFromMinimized();
+    QCOMPARE(controller.windowMinimized(), false);
 }
 
 void QmlCloseRegressionTest::closeDialogHasNonOverlappingRememberRow()

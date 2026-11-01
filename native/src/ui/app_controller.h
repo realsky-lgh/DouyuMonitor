@@ -8,6 +8,7 @@
 #include <QHash>
 #include <QWindow>
 #include <QUrl>
+#include <QElapsedTimer>
 
 #include <memory>
 
@@ -281,6 +282,7 @@ private:
     bool shuttingDown_ = false;
     bool backgroundHosted_ = false;
     bool windowMinimized_ = false;
+    QElapsedTimer minimizeTimer_;
     QString closeBehavior_ = QStringLiteral("ask");
     bool quitRequested_ = false;
     QVariantList searchResults_;

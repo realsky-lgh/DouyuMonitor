@@ -139,6 +139,12 @@ int main(int argc, char *argv[])
     // The shipped Windows package contains the native Windows platform plugin.
     // Ignore test-only/headless overrides so Explorer launches remain reliable.
     qputenv("QT_QPA_PLATFORM", "windows");
+#elif defined(Q_OS_LINUX)
+    // On Linux desktop, frameless window management (minimize, maximize, drag)
+    // is fully supported and reliable under xcb (X11 / XWayland). Prefer xcb with wayland fallback.
+    if (qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) {
+        qputenv("QT_QPA_PLATFORM", "xcb;wayland");
+    }
 #endif
     if (qEnvironmentVariableIsEmpty("QSG_RENDER_LOOP")) {
         qputenv("QSG_RENDER_LOOP", "threaded");

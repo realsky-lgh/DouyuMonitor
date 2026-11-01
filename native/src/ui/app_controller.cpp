@@ -1540,18 +1540,20 @@ void AppController::minimizeWindow()
 {
     if (shuttingDown_ || backgroundHosted_) return;
     if (windowMinimized_) return;
-    if (!windowMinimized_) {
-        windowMinimized_ = true;
-        emit windowMinimizedChanged();
-    }
+    windowMinimized_ = true;
+    minimizeTimer_.start();
+    emit windowMinimizedChanged();
     if (coordinator_ != nullptr) coordinator_->suspendRendering();
     if (danmaku_ != nullptr) danmaku_->setPresentationSuspended(true);
-    if (!mainWindow_.isNull()) mainWindow_->showMinimized();
+    if (!mainWindow_.isNull()) {
+        mainWindow_->showMinimized();
+    }
 }
 
 void AppController::minimizeToBackground()
 {
     if (shuttingDown_) return;
+    minimizeTimer_.invalidate();
     if (coordinator_ != nullptr) coordinator_->suspendRendering();
     if (danmaku_ != nullptr) danmaku_->setPresentationSuspended(true);
     if (!backgroundHosted_) {
@@ -1573,6 +1575,7 @@ void AppController::closeToTray()
 void AppController::restoreFromBackground()
 {
     if (shuttingDown_) return;
+    minimizeTimer_.invalidate();
     if (backgroundHosted_) {
         backgroundHosted_ = false;
         emit backgroundHostedChanged();
@@ -1592,6 +1595,10 @@ void AppController::restoreFromBackground()
 void AppController::restoreFromMinimized()
 {
     if (shuttingDown_ || !windowMinimized_) return;
+    if (!mainWindow_.isNull() && minimizeTimer_.isValid() && minimizeTimer_.elapsed() < 300) {
+        return;
+    }
+    minimizeTimer_.invalidate();
     windowMinimized_ = false;
     emit windowMinimizedChanged();
     if (coordinator_ != nullptr) coordinator_->resumeRendering();
