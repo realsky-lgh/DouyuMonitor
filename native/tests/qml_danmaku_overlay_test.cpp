@@ -53,8 +53,25 @@ public:
         messages_.clear();
     }
 
+    Q_INVOKABLE void blockDanmaku(const QString &roomId, const QString &text)
+    {
+        blockedRooms_.append(roomId);
+        blockedTexts_.append(text);
+        emit danmakuBlocked(roomId, text);
+    }
+
+    Q_INVOKABLE void copyToClipboard(const QString &text)
+    {
+        copiedText_ = text;
+    }
+
+    QString copiedText_;
+    QStringList blockedRooms_;
+    QStringList blockedTexts_;
+
 signals:
     void messageAvailable(const QString &roomId);
+    void danmakuBlocked(const QString &roomId, const QString &text);
     void settingsChanged();
 
 private:
@@ -133,6 +150,7 @@ private slots:
     void keepsLaunchingDuringContinuousMessageArrival();
     void rendersColoredAndNobleDanmaku();
     void rendersFansAndRoomAdminBadges();
+    void blocksAndCopiesDanmakuFromContextMenu();
 };
 
 void QmlDanmakuOverlayTest::pausesHiddenOverlayWithoutConsumingQueuedMessages()
@@ -352,6 +370,39 @@ void QmlDanmakuOverlayTest::rendersFansAndRoomAdminBadges()
     QObject *adminBadge = line->findChild<QObject *>(QStringLiteral("danmakuAdminBadge"));
     QVERIFY(adminBadge != nullptr);
     QCOMPARE(adminBadge->property("visible").toBool(), true);
+}
+
+void QmlDanmakuOverlayTest::blocksAndCopiesDanmakuFromContextMenu()
+{
+    QQmlEngine engine;
+    QQuickWindow window;
+    window.resize(400, 200);
+    window.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+
+    FakeDanmakuQmlController controller;
+    controller.enqueue(message(QStringLiteral("m1"), QStringLiteral("屏蔽此弹幕测试")));
+    std::unique_ptr<QQuickItem> overlay(createOverlay(engine, window, controller));
+    QVERIFY(overlay != nullptr);
+
+    QTRY_VERIFY_WITH_TIMEOUT(activeLines(overlay.get()).size() >= 1, 1500);
+    QObject *line = activeLines(overlay.get()).constFirst();
+
+    QObject *menu = line->findChild<QObject *>(QStringLiteral("danmakuContextMenu"));
+    QVERIFY(menu != nullptr);
+
+    QObject *copyOption = line->findChild<QObject *>(QStringLiteral("danmakuCopyOption"));
+    QVERIFY(copyOption != nullptr);
+    QVERIFY(QMetaObject::invokeMethod(copyOption, "triggered"));
+    QCOMPARE(controller.copiedText_, QStringLiteral("屏蔽此弹幕测试"));
+
+    QObject *blockOption = line->findChild<QObject *>(QStringLiteral("danmakuBlockOption"));
+    QVERIFY(blockOption != nullptr);
+    QVERIFY(QMetaObject::invokeMethod(blockOption, "triggered"));
+    QCOMPARE(controller.blockedTexts_.contains(QStringLiteral("屏蔽此弹幕测试")), true);
+
+    // After blocking, the line should be removed from active items
+    QTRY_COMPARE_WITH_TIMEOUT(activeLines(overlay.get()).size(), 0, 1000);
 }
 
 QTEST_MAIN(QmlDanmakuOverlayTest)

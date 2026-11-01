@@ -1,3 +1,5 @@
+#include <QClipboard>
+#include <QGuiApplication>
 #include <QSettings>
 #include <QTemporaryDir>
 #include <QJsonArray>
@@ -180,6 +182,7 @@ private slots:
     void rejectsImportAfterVerifiedRoomIdentityChanges();
     void keepsImportPreviewWhenBundledRoomIsFirstCached();
     void pacesAndDebouncesLibraryStatusPolling();
+    void danmakuBlocksMessageForSessionAndCopiesToClipboard();
 };
 
 void AppControllerTest::keepsImportPreviewWhenBundledRoomIsFirstCached()
@@ -1648,6 +1651,48 @@ void AppControllerTest::pacesAndDebouncesLibraryStatusPolling()
     // Force refresh bypasses TTL
     controller.refreshLibraryLiveStatuses(QStringLiteral("history"), true);
     QTRY_VERIFY_WITH_TIMEOUT(librarySpy.count() > countAfterFirstRefresh, 3000);
+}
+
+void AppControllerTest::danmakuBlocksMessageForSessionAndCopiesToClipboard()
+{
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    QSettings settings(directory.filePath(QStringLiteral("workspace.ini")), QSettings::IniFormat);
+    FakeNotificationSink sink;
+
+    FakeDanmakuFactoryState state;
+    FakeDanmakuClient *clientPtr = nullptr;
+    const DanmakuClientFactory factory = [&state, &clientPtr](const QString &roomId, QObject *parent) {
+        state.rooms.push_back(roomId);
+        auto client = std::make_unique<FakeDanmakuClient>(roomId, &state, parent);
+        clientPtr = client.get();
+        return client;
+    };
+    AppController controller(fakeServicePath(), &settings, &sink, factory);
+
+    QCOMPARE(controller.addRoom(QStringLiteral("63136")), QString());
+    QTRY_VERIFY_WITH_TIMEOUT(clientPtr != nullptr, 2000);
+
+    DanmakuController *danmaku = controller.danmaku();
+    QVERIFY(danmaku != nullptr);
+
+    // Test copy to clipboard does not crash even without GUI instance
+    danmaku->copyToClipboard(QStringLiteral("测试复制弹幕"));
+
+    // Initially not blocked
+    QCOMPARE(danmaku->isDanmakuBlocked(QStringLiteral("63136"), QStringLiteral("广告弹幕")), false);
+
+    // Block the danmaku
+    danmaku->blockDanmaku(QStringLiteral("63136"), QStringLiteral("广告弹幕"));
+    QCOMPARE(danmaku->isDanmakuBlocked(QStringLiteral("63136"), QStringLiteral("广告弹幕")), true);
+
+    // Other rooms or different text not blocked
+    QCOMPARE(danmaku->isDanmakuBlocked(QStringLiteral("63136"), QStringLiteral("正常弹幕")), false);
+    QCOMPARE(danmaku->isDanmakuBlocked(QStringLiteral("71415"), QStringLiteral("广告弹幕")), false);
+
+    // When room is cleared, in-memory blocked list is cleared
+    danmaku->clearRoom(QStringLiteral("63136"));
+    QCOMPARE(danmaku->isDanmakuBlocked(QStringLiteral("63136"), QStringLiteral("广告弹幕")), false);
 }
 
 QTEST_GUILESS_MAIN(AppControllerTest)

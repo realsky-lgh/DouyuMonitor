@@ -1,7 +1,9 @@
 #include "danmaku/danmaku_controller.h"
 
+#include <QClipboard>
 #include <QDateTime>
 #include <QDebug>
+#include <QGuiApplication>
 
 #include <utility>
 
@@ -164,6 +166,7 @@ void DanmakuController::synchronize(const QVector<DanmakuRoomEligibility> &rooms
 
 void DanmakuController::stopAll()
 {
+    sessionBlockedTexts_.clear();
     sessions_.stopAll();
 }
 
@@ -272,20 +275,26 @@ void DanmakuController::clearRoomGovernanceOverride(const QString &roomId)
 QVariantMap DanmakuController::takeNextMessage(const QString &roomId)
 {
     if (presentationSuspended_) return {};
-    const auto message = sessions_.takeNextMessage(roomId);
-    if (!message.has_value()) return {};
-    return {
-        {QStringLiteral("id"), message->id},
-        {QStringLiteral("roomId"), message->roomId},
-        {QStringLiteral("nickname"), message->nickname},
-        {QStringLiteral("text"), message->text},
-        {QStringLiteral("color"), message->color},
-        {QStringLiteral("nobleLevel"), message->nobleLevel},
-        {QStringLiteral("badgeName"), message->badgeName},
-        {QStringLiteral("badgeLevel"), message->badgeLevel},
-        {QStringLiteral("isRoomAdmin"), message->isRoomAdmin},
-        {QStringLiteral("receivedAtUtc"), message->receivedAtUtc.toString(Qt::ISODateWithMs)},
-    };
+    while (const auto message = sessions_.takeNextMessage(roomId)) {
+        const QString trimmed = message->text.trimmed();
+        if (sessionBlockedTexts_.value(roomId).contains(trimmed)
+            || sessionBlockedTexts_.value(QString()).contains(trimmed)) {
+            continue;
+        }
+        return {
+            {QStringLiteral("id"), message->id},
+            {QStringLiteral("roomId"), message->roomId},
+            {QStringLiteral("nickname"), message->nickname},
+            {QStringLiteral("text"), message->text},
+            {QStringLiteral("color"), message->color},
+            {QStringLiteral("nobleLevel"), message->nobleLevel},
+            {QStringLiteral("badgeName"), message->badgeName},
+            {QStringLiteral("badgeLevel"), message->badgeLevel},
+            {QStringLiteral("isRoomAdmin"), message->isRoomAdmin},
+            {QStringLiteral("receivedAtUtc"), message->receivedAtUtc.toString(Qt::ISODateWithMs)},
+        };
+    }
+    return {};
 }
 
 QVariantMap DanmakuController::statusForRoom(const QString &roomId) const
@@ -327,7 +336,33 @@ void DanmakuController::retry(const QString &roomId)
 void DanmakuController::clearRoom(const QString &roomId)
 {
     qInfo().noquote() << "danmaku clear room=" << roomId;
+    sessionBlockedTexts_.remove(roomId);
     sessions_.clearRoom(roomId);
+}
+
+void DanmakuController::blockDanmaku(const QString &roomId, const QString &text)
+{
+    const QString trimmed = text.trimmed();
+    if (trimmed.isEmpty()) return;
+    sessionBlockedTexts_[roomId].insert(trimmed);
+    qInfo().noquote() << "danmaku blocked for session room=" << roomId << "text=" << trimmed;
+    emit danmakuBlocked(roomId, trimmed);
+}
+
+bool DanmakuController::isDanmakuBlocked(const QString &roomId, const QString &text) const
+{
+    const QString trimmed = text.trimmed();
+    return sessionBlockedTexts_.value(roomId).contains(trimmed)
+        || sessionBlockedTexts_.value(QString()).contains(trimmed);
+}
+
+void DanmakuController::copyToClipboard(const QString &text)
+{
+    if (auto *app = qobject_cast<QGuiApplication *>(QCoreApplication::instance())) {
+        if (QClipboard *clipboard = app->clipboard()) {
+            clipboard->setText(text);
+        }
+    }
 }
 
 #ifdef DOUYU_TESTING

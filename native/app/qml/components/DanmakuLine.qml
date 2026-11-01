@@ -1,4 +1,6 @@
 import QtQuick
+import QtQuick.Controls
+import ".."
 
 Item {
     id: root
@@ -53,10 +55,12 @@ Item {
     height: contentRow.implicitHeight + 4
     x: containerWidth
     y: laneTop
-    enabled: false
-    z: root.isSelf ? 20 : (root.nobleLevel >= 5 ? 10 : 1)
+    enabled: true
+    z: (lineMouseArea.containsMouse || danmakuMenu.visible) ? 100 : (root.isSelf ? 20 : (root.nobleLevel >= 5 ? 10 : 1))
 
     signal finished()
+    signal blockRequested(string text)
+    signal copyRequested(string text)
 
     Rectangle {
         id: pill
@@ -187,13 +191,92 @@ Item {
         }
     }
 
+    Rectangle {
+        id: hoverOutline
+        anchors.fill: contentRow
+        anchors.leftMargin: root.hasPill ? -8 : -4
+        anchors.rightMargin: root.hasPill ? -8 : -4
+        anchors.topMargin: -3
+        anchors.bottomMargin: -3
+        radius: 4
+        visible: lineMouseArea.containsMouse || danmakuMenu.visible
+        color: Qt.rgba(1, 1, 1, 0.1)
+        border.color: Qt.rgba(1, 1, 1, 0.4)
+        border.width: 1
+        z: -1
+    }
+
+    MouseArea {
+        id: lineMouseArea
+        objectName: "danmakuLineMouseArea"
+        anchors.fill: parent
+        hoverEnabled: true
+        acceptedButtons: Qt.RightButton
+        cursorShape: containsMouse ? Qt.PointingHandCursor : Qt.ArrowCursor
+        onClicked: (mouse) => {
+            if (mouse.button === Qt.RightButton) {
+                danmakuMenu.popup(mouse.x, mouse.y)
+            }
+        }
+    }
+
+    Menu {
+        id: danmakuMenu
+        objectName: "danmakuContextMenu"
+        title: "弹幕选项"
+
+        background: Rectangle {
+            implicitWidth: 92
+            implicitHeight: 64
+            color: typeof Theme !== "undefined" ? Theme.controlSurface : "#1f242c"
+            border.color: typeof Theme !== "undefined" ? Theme.border : "#343b45"
+            radius: typeof Theme !== "undefined" ? Theme.radiusSmall : 4
+        }
+
+        MenuItem {
+            objectName: "danmakuBlockOption"
+            text: "屏蔽"
+            onTriggered: root.blockRequested(root.messageText)
+            contentItem: Text {
+                text: parent.text
+                color: typeof Theme !== "undefined" ? Theme.danger : "#ff4d4f"
+                leftPadding: 8
+                verticalAlignment: Text.AlignVCenter
+                font.pixelSize: 12
+            }
+            background: Rectangle {
+                color: parent.highlighted ? (typeof Theme !== "undefined" ? Theme.well : "#2b313a") : "transparent"
+                radius: typeof Theme !== "undefined" ? Theme.radiusSmall : 4
+            }
+        }
+
+        MenuItem {
+            objectName: "danmakuCopyOption"
+            text: "复制"
+            onTriggered: root.copyRequested(root.messageText)
+            contentItem: Text {
+                text: parent.text
+                color: typeof Theme !== "undefined" ? Theme.text : "#f4f6f8"
+                leftPadding: 8
+                verticalAlignment: Text.AlignVCenter
+                font.pixelSize: 12
+            }
+            background: Rectangle {
+                color: parent.highlighted ? (typeof Theme !== "undefined" ? Theme.well : "#2b313a") : "transparent"
+                radius: typeof Theme !== "undefined" ? Theme.radiusSmall : 4
+            }
+        }
+    }
+
     XAnimator {
+        id: moveAnimator
         target: root
         from: root.containerWidth
         to: -root.width
         duration: root.durationMs
         easing.type: Easing.Linear
         running: true
+        paused: lineMouseArea.containsMouse || danmakuMenu.visible
         onFinished: root.finished()
     }
 }

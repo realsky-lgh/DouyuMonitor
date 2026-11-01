@@ -84,6 +84,39 @@ Item {
             if (roomId === root.roomId && root.enabled && !root.presentationSuspended
                     && !launchTimer.running) launchTimer.restart()
         }
+
+        function onDanmakuBlocked(roomId, text) {
+            if (roomId === root.roomId || !roomId) {
+                root.removeDanmakuByText(text)
+            }
+        }
+    }
+
+    function removeDanmakuByText(text) {
+        if (!text) return
+        const trimmed = text.trim()
+        if (pendingMessage && pendingMessage.text && pendingMessage.text.trim() === trimmed) {
+            pendingMessage = ({})
+        }
+        for (let index = activeItems.length - 1; index >= 0; --index) {
+            const item = activeItems[index]
+            if (item && item.messageText && item.messageText.trim() === trimmed) {
+                root.removeActiveItem(item)
+            }
+        }
+    }
+
+    function handleBlockRequested(text) {
+        if (root.controller) {
+            root.controller.blockDanmaku(root.roomId, text)
+        }
+        root.removeDanmakuByText(text)
+    }
+
+    function handleCopyRequested(text) {
+        if (root.controller) {
+            root.controller.copyToClipboard(text)
+        }
     }
 
     function hasPendingMessage() {
@@ -200,6 +233,8 @@ Item {
         if (!line) return
 
         line.finished.connect(function() { root.removeActiveItem(line) })
+        line.blockRequested.connect(root.handleBlockRequested)
+        line.copyRequested.connect(root.handleCopyRequested)
         activeItems.push(line)
         pendingMessage = ({})
     }
@@ -244,6 +279,8 @@ Item {
         if (!line) return
 
         line.finished.connect(function() { root.removeActiveItem(line) })
+        line.blockRequested.connect(root.handleBlockRequested)
+        line.copyRequested.connect(root.handleCopyRequested)
         activeItems.push(line)
     }
 

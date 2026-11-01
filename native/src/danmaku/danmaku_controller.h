@@ -39,6 +39,9 @@ public:
     Q_INVOKABLE void clearStats(const QString &roomId);
     Q_INVOKABLE void retry(const QString &roomId);
     Q_INVOKABLE void clearRoom(const QString &roomId);
+    Q_INVOKABLE void blockDanmaku(const QString &roomId, const QString &text);
+    Q_INVOKABLE bool isDanmakuBlocked(const QString &roomId, const QString &text) const;
+    Q_INVOKABLE void copyToClipboard(const QString &text);
 
 #ifdef DOUYU_TESTING
     int activeSessionCountForTest() const;
@@ -48,6 +51,7 @@ signals:
     void settingsChanged();
     void roomStateChanged(const QString &roomId);
     void messageAvailable(const QString &roomId);
+    void danmakuBlocked(const QString &roomId, const QString &text);
     void presentationSuspendedChanged();
 
 private:
@@ -60,5 +64,6 @@ private:
 
     NativeDanmakuConfiguration configuration_;
     DanmakuSessionManager sessions_;
+    QHash<QString, QSet<QString>> sessionBlockedTexts_;
     bool presentationSuspended_ = false;
 };
