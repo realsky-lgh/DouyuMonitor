@@ -185,6 +185,12 @@ public:
         removedRoom = roomId;
     }
 
+    Q_INVOKABLE QString addRoom(const QString &roomId)
+    {
+        addedRoom = roomId;
+        return {};
+    }
+
     QString lastVolumeRoom;
     int lastVolume = -1;
     QString lastQualityRoom;
@@ -194,6 +200,7 @@ public:
     QString movedRoom;
     int movedDelta = 0;
     QString removedRoom;
+    QString addedRoom;
     QStringList attachedRooms;
     QStringList detachedRooms;
 };
@@ -633,6 +640,7 @@ private slots:
     void rendersRoomAvatarFromModelRole();
     void placesSidebarToggleBeforeBrandAndOpensHistory();
     void defersLibraryUpdatesWhileInteracting();
+    void historyListUsesAddWatchButton();
     void verifiesSidebarAndLibraryTitleTypographyConsistent();
     void verifiesGuildNavigationTypographyScaled();
     void placesNavigationEntryAfterSidebarToggleAndBeforeBrand();
@@ -1883,6 +1891,61 @@ void QmlInteractionTest::defersLibraryUpdatesWhileInteracting()
     QVERIFY(QMetaObject::invokeMethod(view.get(), "forceRebuild"));
     QCOMPARE(view->property("pendingRebuild").toBool(), false);
     QCOMPARE(view->property("visibleRooms").toList().size(), 2);
+}
+
+void QmlInteractionTest::historyListUsesAddWatchButton()
+{
+    registerQmlTypes();
+    FakeRoomController controller;
+    QQmlApplicationEngine engine;
+    QQmlComponent component(&engine, QUrl(QStringLiteral("qrc:/qml/components/RoomLibraryView.qml")));
+    QVERIFY2(component.isReady(), qPrintable(component.errorString()));
+
+    QQuickWindow hostWindow;
+    hostWindow.resize(QSize(360, 640));
+    hostWindow.show();
+
+    std::unique_ptr<QObject> view(component.createWithInitialProperties({
+        {QStringLiteral("parent"), QVariant::fromValue(hostWindow.contentItem())},
+        {QStringLiteral("width"), 360},
+        {QStringLiteral("height"), 640},
+        {QStringLiteral("controller"), QVariant::fromValue(static_cast<QObject *>(&controller))},
+        {QStringLiteral("favoritesOnly"), false},
+    }));
+    QVERIFY(view != nullptr);
+
+    QVariantList historyRooms{
+        QVariantMap{
+            {QStringLiteral("roomId"), QStringLiteral("71415")},
+            {QStringLiteral("anchorName"), QStringLiteral("寅子")},
+            {QStringLiteral("title"), QStringLiteral("开心直播")},
+            {QStringLiteral("online"), true},
+            {QStringLiteral("active"), false},
+            {QStringLiteral("favorite"), false},
+            {QStringLiteral("lastOpenedAtMs"), qint64(1000)}
+        }
+    };
+    view->setProperty("libraryRooms", historyRooms);
+    QCOMPARE(view->property("visibleRooms").toList().size(), 1);
+
+    QObject *list = view->findChild<QObject *>(QStringLiteral("historyList"));
+    QVERIFY(list != nullptr);
+
+    QQuickItem *rowItem = nullptr;
+    QTRY_VERIFY_WITH_TIMEOUT(QMetaObject::invokeMethod(list, "itemAtIndex",
+                                                       Q_RETURN_ARG(QQuickItem *, rowItem),
+                                                       Q_ARG(int, 0))
+                                 && rowItem != nullptr,
+                             1000);
+
+    QObject *addWatchBtn = rowItem->findChild<QObject *>(QStringLiteral("openHistoryRoomButton"));
+    QVERIFY(addWatchBtn != nullptr);
+    QCOMPARE(QQmlProperty::read(addWatchBtn, "Accessible.name", qmlContext(addWatchBtn)).toString(),
+             QStringLiteral("加入观看"));
+
+    // Click addWatchBtn
+    QVERIFY(QMetaObject::invokeMethod(addWatchBtn, "clicked"));
+    QCOMPARE(controller.addedRoom, QStringLiteral("71415"));
 }
 
 void QmlInteractionTest::verifiesSidebarAndLibraryTitleTypographyConsistent()

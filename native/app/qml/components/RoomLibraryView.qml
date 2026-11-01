@@ -222,49 +222,44 @@ Item {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.rightMargin: 5
-                width: root.favoritesOnly ? 27 : 58
+                width: 27
                 height: 27
 
                 ToolButton {
                     objectName: "openHistoryRoomButton"
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 27
-                    height: 27
+                    anchors.fill: parent
                     enabled: !entry.active && root.controller !== null
-                    Accessible.name: "打开房间"
+                    Accessible.name: "加入观看"
                     ToolTip.visible: hovered
                     ToolTip.text: Accessible.name
                     onClicked: {
                         root.controller.addRoom(entry.roomId)
                         root.forceRebuild()
                     }
-                    contentItem: Image { anchors.centerIn: parent; width: 16; height: 16; source: Qt.resolvedUrl("../assets/icons/plus.svg"); opacity: parent.enabled ? 1 : 0.35 }
+                    contentItem: Image {
+                        anchors.centerIn: parent
+                        width: 16
+                        height: 16
+                        source: Qt.resolvedUrl("../assets/icons/plus.svg")
+                        opacity: parent.enabled ? 1 : 0.35
+                    }
                     background: Rectangle {
                         radius: Theme.radiusSmall
                         color: parent.hovered && parent.enabled ? "#2a211c" : "transparent"
                     }
                 }
+            }
 
-                ToolButton {
-                    objectName: "removeHistoryButton"
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 27
-                    height: 27
-                    visible: !root.favoritesOnly
+            Menu {
+                id: historyContextMenu
+                MenuItem {
+                    text: "从历史中删除"
                     enabled: !entry.active && entry.lastOpenedAtMs > 0 && root.controller !== null
-                    Accessible.name: "删除历史记录"
-                    ToolTip.visible: hovered
-                    ToolTip.text: Accessible.name
-                    onClicked: {
-                        root.controller.removeHistoryRoom(entry.roomId)
-                        root.forceRebuild()
-                    }
-                    contentItem: Image { anchors.centerIn: parent; width: 16; height: 16; source: Qt.resolvedUrl("../assets/icons/x.svg"); opacity: parent.enabled ? 1 : 0.62 }
-                    background: Rectangle {
-                        radius: Theme.radiusSmall
-                        color: parent.hovered && parent.enabled ? "#4b1c1c" : "transparent"
+                    onTriggered: {
+                        if (root.controller) {
+                            root.controller.removeHistoryRoom(entry.roomId)
+                            root.forceRebuild()
+                        }
                     }
                 }
             }
@@ -273,7 +268,12 @@ Item {
                 id: historyMouse
                 anchors.fill: parent
                 hoverEnabled: true
-                acceptedButtons: Qt.NoButton
+                acceptedButtons: Qt.RightButton
+                onClicked: (mouse) => {
+                    if (mouse.button === Qt.RightButton && !root.favoritesOnly) {
+                        historyContextMenu.popup()
+                    }
+                }
                 onContainsMouseChanged: {
                     if (containsMouse) {
                         root.noteUserInteracting()
