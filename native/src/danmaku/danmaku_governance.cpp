@@ -115,7 +115,12 @@ std::optional<DanmakuMessage> sanitizeMessage(const QString &roomId,
                                               const QString &id,
                                               const QString &nickname,
                                               const QString &text,
-                                              const QDateTime &receivedAtUtc)
+                                              const QDateTime &receivedAtUtc,
+                                              const QString &color,
+                                              int nobleLevel,
+                                              const QString &badgeName,
+                                              int badgeLevel,
+                                              bool isRoomAdmin)
 {
     DanmakuMessage message;
     message.roomId = truncateCodePoints(sanitizeField(roomId), 200);
@@ -123,6 +128,11 @@ std::optional<DanmakuMessage> sanitizeMessage(const QString &roomId,
     message.nickname = truncateCodePoints(sanitizeField(nickname), 40);
     message.text = truncateCodePoints(sanitizeField(text), 200);
     message.receivedAtUtc = receivedAtUtc.toUTC();
+    message.color = color.trimmed();
+    message.nobleLevel = std::max(0, nobleLevel);
+    message.badgeName = truncateCodePoints(sanitizeField(badgeName), 20);
+    message.badgeLevel = std::max(0, badgeLevel);
+    message.isRoomAdmin = isRoomAdmin;
     if (message.roomId.isEmpty() || message.text.isEmpty()) return std::nullopt;
     if (message.nickname.isEmpty()) message.nickname = QStringLiteral("匿名");
     return message;

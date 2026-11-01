@@ -77,6 +77,70 @@ QByteArray encodeFrame(const QString &payload, quint16 protocol)
     return frame;
 }
 
+QString resolveDanmakuColor(const QString &colorField)
+{
+    const QString trimmed = colorField.trimmed();
+    if (trimmed.isEmpty() || trimmed == QLatin1String("0")) {
+        return {};
+    }
+    bool ok = false;
+    const int code = trimmed.toInt(&ok);
+    if (ok) {
+        switch (code) {
+        case 1: return QStringLiteral("#fe0302"); // 红色
+        case 2: return QStringLiteral("#00a0e9"); // 蓝色
+        case 3: return QStringLiteral("#1fe600"); // 绿色
+        case 4: return QStringLiteral("#ffa200"); // 橙色
+        case 5: return QStringLiteral("#8938f7"); // 紫色
+        case 6: return QStringLiteral("#ff4a80"); // 粉色
+        default:
+            if (code > 6 && code <= 0xFFFFFF) {
+                return QStringLiteral("#%1").arg(code, 6, 16, QLatin1Char('0'));
+            }
+            return {};
+        }
+    }
+    if (trimmed.startsWith(QLatin1Char('#'))
+        && (trimmed.length() == 7 || trimmed.length() == 9)) {
+        return trimmed.toLower();
+    }
+    return {};
+}
+
+QString formatDanmakuText(const QString &text)
+{
+    if (!text.contains(QLatin1String("[emot:"))) {
+        return text;
+    }
+    QString formatted = text;
+    static const QList<QPair<QString, QString>> kEmoteMap = {
+        {QStringLiteral("[emot:dy001]"), QStringLiteral("[赞]")},
+        {QStringLiteral("[emot:dy002]"), QStringLiteral("[狂笑]")},
+        {QStringLiteral("[emot:dy003]"), QStringLiteral("[惊讶]")},
+        {QStringLiteral("[emot:dy004]"), QStringLiteral("[问号]")},
+        {QStringLiteral("[emot:dy005]"), QStringLiteral("[666]")},
+        {QStringLiteral("[emot:dy006]"), QStringLiteral("[心动]")},
+        {QStringLiteral("[emot:dy007]"), QStringLiteral("[哭泣]")},
+        {QStringLiteral("[emot:dy008]"), QStringLiteral("[白眼]")},
+        {QStringLiteral("[emot:dy009]"), QStringLiteral("[尴尬]")},
+        {QStringLiteral("[emot:dy010]"), QStringLiteral("[大笑]")},
+        {QStringLiteral("[emot:dy011]"), QStringLiteral("[冷汗]")},
+        {QStringLiteral("[emot:dy012]"), QStringLiteral("[抓狂]")},
+        {QStringLiteral("[emot:dy013]"), QStringLiteral("[吐血]")},
+        {QStringLiteral("[emot:dy014]"), QStringLiteral("[便便]")},
+        {QStringLiteral("[emot:dy015]"), QStringLiteral("[愤怒]")},
+        {QStringLiteral("[emot:dy016]"), QStringLiteral("[害羞]")},
+        {QStringLiteral("[emot:dy017]"), QStringLiteral("[得意]")},
+        {QStringLiteral("[emot:dy018]"), QStringLiteral("[再见]")},
+        {QStringLiteral("[emot:dy019]"), QStringLiteral("[睡觉]")},
+        {QStringLiteral("[emot:dy020]"), QStringLiteral("[抱抱]")},
+    };
+    for (const auto &pair : kEmoteMap) {
+        formatted.replace(pair.first, pair.second);
+    }
+    return formatted;
+}
+
 FrameDecodeResult FrameDecoder::push(QByteArrayView chunk)
 {
     pending_.append(chunk.data(), chunk.size());

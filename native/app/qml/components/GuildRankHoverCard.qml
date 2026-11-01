@@ -9,7 +9,7 @@ Popup {
     readonly property bool hasRankData: member && member.rankMatched
 
     width: 320
-    height: 258
+    height: 272
     padding: 12
     closePolicy: Popup.NoAutoClose
     focus: false
@@ -46,13 +46,13 @@ Popup {
 
             Column {
                 width: parent.width - 50
-                spacing: 1
+                spacing: 2
                 Text {
                     width: parent.width
                     text: root.member ? String(root.member.anchorName || "") : ""
                     color: Theme.text
                     font.bold: true
-                    font.pixelSize: 14
+                    font.pixelSize: Theme.guildTitleSize
                     elide: Text.ElideRight
                 }
                 Text {
@@ -63,7 +63,7 @@ Popup {
                              : root.member.role === "member" ? "队员" : "其他")
                           : ""
                     color: Theme.mutedText
-                    font.pixelSize: 10
+                    font.pixelSize: Theme.guildSubheaderSize
                 }
             }
         }
@@ -133,7 +133,7 @@ Popup {
             visible: !root.hasRankData
             text: root.member ? "暂无野榜数据" : ""
             color: Theme.mutedText
-            font.pixelSize: 11
+            font.pixelSize: Theme.guildSectionTitleSize
         }
 
         Grid {
@@ -141,30 +141,30 @@ Popup {
             columns: 2
             spacing: 6
             visible: root.hasRankData
-            Text { text: "综合"; color: Theme.mutedText; font.pixelSize: 10 }
+            Text { text: "综合"; color: Theme.mutedText; font.pixelSize: Theme.guildSubheaderSize }
             Text {
                 text: root.member && root.member.score >= 0
                       ? Number(root.member.score).toFixed(1) : "—"
                 color: Theme.text
                 font.bold: true
-                font.pixelSize: 10
+                font.pixelSize: Theme.guildSubheaderSize
             }
-            Text { text: "定级赛总评"; color: Theme.mutedText; font.pixelSize: 10 }
+            Text { text: "定级赛总评"; color: Theme.mutedText; font.pixelSize: Theme.guildSubheaderSize }
             Text {
                 text: root.member && root.member.placementAverage >= 0
                       ? Number(root.member.placementAverage).toFixed(2) : "—"
                 color: Theme.text
                 font.bold: true
-                font.pixelSize: 10
+                font.pixelSize: Theme.guildSubheaderSize
             }
-            Text { text: "游乐值"; color: Theme.mutedText; font.pixelSize: 10 }
+            Text { text: "游乐值"; color: Theme.mutedText; font.pixelSize: Theme.guildSubheaderSize }
             Text {
                 text: root.member && root.member.playValue !== null
                       && root.member.playValue !== undefined
                       ? Number(root.member.playValue).toFixed(1) : "—"
                 color: Theme.text
                 font.bold: true
-                font.pixelSize: 10
+                font.pixelSize: Theme.guildSubheaderSize
             }
         }
     }

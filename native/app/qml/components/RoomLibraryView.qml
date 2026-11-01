@@ -82,6 +82,7 @@ Item {
 
     ListView {
         id: historyList
+        objectName: "historyList"
         anchors.fill: parent
         clip: true
         model: root.visibleRooms
@@ -161,7 +162,7 @@ Item {
                     visible: !roomAvatarImage.visible
                     color: root.textColor
                     font.bold: true
-                    font.pixelSize: 22
+                    font.pixelSize: 20
                     text: entry.anchorName.length > 0 ? entry.anchorName.slice(0, 1) : entry.roomId.slice(0, 1)
                 }
             }
@@ -180,29 +181,36 @@ Item {
                     color: root.textColor
                     elide: Text.ElideRight
                     font.bold: true
-                    font.pixelSize: 22
+                    font.pixelSize: Theme.roomItemTitleSize
                     text: entry.anchorName.length > 0 ? entry.anchorName : entry.roomId
+                    ToolTip.visible: truncated && historyMouse.containsMouse
+                    ToolTip.text: text
+                    ToolTip.delay: 400
                 }
                 Text {
+                    objectName: "libraryRoomSubtitle"
                     width: parent.width
                     color: root.mutedTextColor
                     elide: Text.ElideRight
-                    font.pixelSize: 18
+                    font.pixelSize: Theme.roomItemSubtitleSize
                     text: entry.title.length > 0 ? entry.title : entry.roomId
+                    ToolTip.visible: truncated && historyMouse.containsMouse
+                    ToolTip.text: text
+                    ToolTip.delay: 400
                 }
                 Row {
                     spacing: 6
 
                     Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 8
-                        height: 8
-                        radius: 4
+                        width: 7
+                        height: 7
+                        radius: 3.5
                         color: (entry.active || entry.online) ? Theme.online : Theme.mutedText
                     }
                     Text {
                         color: (entry.active || entry.online) ? Theme.online : root.mutedTextColor
-                        font.pixelSize: 16
+                        font.pixelSize: Theme.roomItemStatusSize
                         text: entry.active ? "当前播放" : (entry.online ? "直播中" : (root.favoritesOnly ? "未开播" : ("未开播 · " + root.openedLabel(entry.lastOpenedAtMs))))
                     }
                 }
@@ -278,7 +286,7 @@ Item {
             anchors.centerIn: parent
             visible: historyList.count === 0
             color: root.mutedTextColor
-            font.pixelSize: 18
+            font.pixelSize: 14
             text: root.favoritesOnly ? "暂无收藏" : "暂无历史记录"
         }
     }

@@ -633,6 +633,8 @@ private slots:
     void rendersRoomAvatarFromModelRole();
     void placesSidebarToggleBeforeBrandAndOpensHistory();
     void defersLibraryUpdatesWhileInteracting();
+    void verifiesSidebarAndLibraryTitleTypographyConsistent();
+    void verifiesGuildNavigationTypographyScaled();
     void placesNavigationEntryAfterSidebarToggleAndBeforeBrand();
     void makesRoomListAndNavigationPanelsMutuallyExclusive();
     void closesToastFromQml();
@@ -1748,6 +1750,17 @@ void QmlInteractionTest::showsDanmakuDisplayGovernanceAndStatsTabs()
     QObject *resetDisplay = window->findChild<QObject *>(QStringLiteral("resetDanmakuDisplaySettings"));
     QVERIFY(resetDisplay != nullptr);
     QVERIFY(resetDisplay->property("visible").toBool());
+
+    QObject *colorMultiBtn = window->findChild<QObject *>(QStringLiteral("danmakuColorMultiBtn"));
+    QObject *colorWhiteBtn = window->findChild<QObject *>(QStringLiteral("danmakuColorWhiteBtn"));
+    QObject *badgesShowBtn = window->findChild<QObject *>(QStringLiteral("danmakuBadgesShowBtn"));
+    QObject *badgesHideBtn = window->findChild<QObject *>(QStringLiteral("danmakuBadgesHideBtn"));
+    QVERIFY(colorMultiBtn != nullptr);
+    QVERIFY(colorWhiteBtn != nullptr);
+    QVERIFY(badgesShowBtn != nullptr);
+    QVERIFY(badgesHideBtn != nullptr);
+    QVERIFY(colorMultiBtn->property("visible").toBool());
+    QVERIFY(badgesShowBtn->property("visible").toBool());
 }
 
 void QmlInteractionTest::showsDanmakuStatusOnRoomTile()
@@ -1870,6 +1883,191 @@ void QmlInteractionTest::defersLibraryUpdatesWhileInteracting()
     QVERIFY(QMetaObject::invokeMethod(view.get(), "forceRebuild"));
     QCOMPARE(view->property("pendingRebuild").toBool(), false);
     QCOMPARE(view->property("visibleRooms").toList().size(), 2);
+}
+
+void QmlInteractionTest::verifiesSidebarAndLibraryTitleTypographyConsistent()
+{
+    registerQmlTypes();
+    WorkspaceModel workspace(nullptr);
+    RoomListModel roomModel;
+    RoomSnapshot snapshot;
+    snapshot.roomId = QStringLiteral("63136");
+    snapshot.metadata.roomId = snapshot.roomId;
+    snapshot.metadata.anchorName = QStringLiteral("主播测试名");
+    snapshot.metadata.title = QStringLiteral("直播间测试标题");
+    snapshot.liveStatus = RoomLiveStatus::Online;
+    roomModel.applySnapshots({snapshot});
+
+    FakeRoomController controller;
+    QQmlApplicationEngine engine;
+    QQmlComponent sidebarComponent(&engine, QUrl(QStringLiteral("qrc:/qml/components/RoomSidebar.qml")));
+    QVERIFY2(sidebarComponent.isReady(), qPrintable(sidebarComponent.errorString()));
+
+    QQuickWindow hostWindow;
+    hostWindow.resize(QSize(360, 640));
+    hostWindow.show();
+    std::unique_ptr<QObject> sidebar(sidebarComponent.createWithInitialProperties({
+        {QStringLiteral("parent"), QVariant::fromValue(hostWindow.contentItem())},
+        {QStringLiteral("width"), 360},
+        {QStringLiteral("height"), 640},
+        {QStringLiteral("controller"), QVariant::fromValue(static_cast<QObject *>(&controller))},
+        {QStringLiteral("workspaceModel"), QVariant::fromValue(static_cast<QObject *>(&workspace))},
+        {QStringLiteral("roomModel"), QVariant::fromValue(static_cast<QObject *>(&roomModel))},
+    }));
+    QVERIFY2(sidebar != nullptr, qPrintable(sidebarComponent.errorString()));
+
+    QObject *sidebarList = sidebar->findChild<QObject *>(QStringLiteral("roomList"));
+    QVERIFY(sidebarList != nullptr);
+    QTRY_COMPARE(sidebarList->property("count").toInt(), 1);
+
+    QQuickItem *sidebarRow = nullptr;
+    QTRY_VERIFY_WITH_TIMEOUT(QMetaObject::invokeMethod(sidebarList, "itemAtIndex",
+                                                       Q_RETURN_ARG(QQuickItem *, sidebarRow),
+                                                       Q_ARG(int, 0))
+                                 && sidebarRow != nullptr,
+                             1000);
+
+    QObject *sidebarAnchor = sidebarRow->findChild<QObject *>(QStringLiteral("sidebarRoomAnchorName"));
+    QObject *sidebarTitle = sidebarRow->findChild<QObject *>(QStringLiteral("sidebarRoomTitle"));
+    QVERIFY(sidebarAnchor != nullptr);
+    QVERIFY(sidebarTitle != nullptr);
+
+    const int sidebarAnchorSize = sidebarAnchor->property("font").value<QFont>().pixelSize();
+    const int sidebarTitleSize = sidebarTitle->property("font").value<QFont>().pixelSize();
+
+    // Now test RoomLibraryView
+    QQmlComponent libComponent(&engine, QUrl(QStringLiteral("qrc:/qml/components/RoomLibraryView.qml")));
+    QVERIFY2(libComponent.isReady(), qPrintable(libComponent.errorString()));
+
+    std::unique_ptr<QObject> libView(libComponent.createWithInitialProperties({
+        {QStringLiteral("parent"), QVariant::fromValue(hostWindow.contentItem())},
+        {QStringLiteral("width"), 360},
+        {QStringLiteral("height"), 640},
+        {QStringLiteral("controller"), QVariant::fromValue(static_cast<QObject *>(&controller))},
+    }));
+    QVERIFY2(libView != nullptr, qPrintable(libComponent.errorString()));
+
+    QVariantList initialRooms{
+        QVariantMap{
+            {QStringLiteral("roomId"), QStringLiteral("63136")},
+            {QStringLiteral("anchorName"), QStringLiteral("主播测试名")},
+            {QStringLiteral("title"), QStringLiteral("直播间测试标题")},
+            {QStringLiteral("online"), true},
+            {QStringLiteral("favorite"), true},
+            {QStringLiteral("lastOpenedAtMs"), qint64(1000)}
+        }
+    };
+    libView->setProperty("libraryRooms", initialRooms);
+
+    QObject *libList = libView->findChild<QObject *>(QStringLiteral("historyList"));
+    QVERIFY(libList != nullptr);
+    QTRY_COMPARE(libList->property("count").toInt(), 1);
+
+    QQuickItem *libRow = nullptr;
+    QTRY_VERIFY_WITH_TIMEOUT(QMetaObject::invokeMethod(libList, "itemAtIndex",
+                                                       Q_RETURN_ARG(QQuickItem *, libRow),
+                                                       Q_ARG(int, 0))
+                                 && libRow != nullptr,
+                             1000);
+
+    QObject *libAnchor = libRow->findChild<QObject *>(QStringLiteral("libraryRoomTitle"));
+    QObject *libSubtitle = libRow->findChild<QObject *>(QStringLiteral("libraryRoomSubtitle"));
+    QVERIFY(libAnchor != nullptr);
+    QVERIFY(libSubtitle != nullptr);
+
+    const int libAnchorSize = libAnchor->property("font").value<QFont>().pixelSize();
+    const int libSubtitleSize = libSubtitle->property("font").value<QFont>().pixelSize();
+
+    // Verify consistency: sidebar anchor name size equals library title size (both 16)
+    QCOMPARE(sidebarAnchorSize, libAnchorSize);
+    QCOMPARE(sidebarAnchorSize, 16);
+
+    // Verify consistency: sidebar room title size equals library subtitle size (both 13)
+    QCOMPARE(sidebarTitleSize, libSubtitleSize);
+    QCOMPARE(sidebarTitleSize, 13);
+}
+
+void QmlInteractionTest::verifiesGuildNavigationTypographyScaled()
+{
+    registerQmlTypes();
+    FakeGuildNavigationController controller;
+    controller.roster = QVariantList{
+        QVariantMap{{QStringLiteral("id"), QStringLiteral("hamster-001")},
+                    {QStringLiteral("anchorName"), QStringLiteral("寅子")},
+                    {QStringLiteral("roomId"), QStringLiteral("71415")},
+                    {QStringLiteral("status"), QStringLiteral("resolved")},
+                    {QStringLiteral("liveState"), QStringLiteral("online")},
+                    {QStringLiteral("active"), false}},
+    };
+    controller.teamItems = QVariantList{
+        QVariantMap{{QStringLiteral("id"), QStringLiteral("team-a")},
+                    {QStringLiteral("name"), QStringLiteral("一队")},
+                    {QStringLiteral("memberIds"), QStringList{QStringLiteral("hamster-001")}}},
+    };
+
+    QQmlApplicationEngine engine;
+    QQmlComponent component(&engine, QUrl(QStringLiteral("qrc:/qml/components/GuildNavigationPanel.qml")));
+    QVERIFY2(component.isReady(), qPrintable(component.errorString()));
+
+    QQuickWindow hostWindow;
+    hostWindow.resize(QSize(320, 720));
+    hostWindow.show();
+    std::unique_ptr<QObject> panel(component.createWithInitialProperties({
+        {QStringLiteral("parent"), QVariant::fromValue(hostWindow.contentItem())},
+        {QStringLiteral("width"), 320},
+        {QStringLiteral("height"), 720},
+        {QStringLiteral("controller"), QVariant::fromValue(static_cast<QObject *>(&controller))},
+        {QStringLiteral("visible"), true},
+    }));
+    QVERIFY2(panel != nullptr, qPrintable(component.errorString()));
+
+    // Title font size >= 16
+    QObject *title = panel->findChild<QObject *>(QStringLiteral("guildNavigationTitle"));
+    QVERIFY(title != nullptr);
+    QCOMPARE(title->property("font").value<QFont>().pixelSize(), 16);
+
+    // Search input font size >= 13
+    QObject *search = panel->findChild<QObject *>(QStringLiteral("guildNavigationSearch"));
+    QVERIFY(search != nullptr);
+    QCOMPARE(search->property("font").value<QFont>().pixelSize(), 13);
+
+    // Visible rows: team title, role title, member row
+    QObject *visibleRows = panel->findChild<QObject *>(QStringLiteral("guildVisibleRows"));
+    QVERIFY(visibleRows != nullptr);
+    QTRY_VERIFY(visibleRows->property("count").toInt() >= 2);
+
+    // Row 0 is team header (一队)
+    QQuickItem *firstRow = nullptr;
+    QVERIFY(QMetaObject::invokeMethod(visibleRows, "itemAt", Q_RETURN_ARG(QQuickItem *, firstRow), Q_ARG(int, 0)));
+    QVERIFY(firstRow != nullptr);
+    QObject *teamTitle = firstRow->findChild<QObject *>(QStringLiteral("guildTeamTitle"));
+    QVERIFY(teamTitle != nullptr);
+    QCOMPARE(teamTitle->property("font").value<QFont>().pixelSize(), 13);
+
+    // Find the member row item
+    QQuickItem *memberRowItem = nullptr;
+    for (int i = 0; i < visibleRows->property("count").toInt(); ++i) {
+        QQuickItem *item = nullptr;
+        QVERIFY(QMetaObject::invokeMethod(visibleRows, "itemAt", Q_RETURN_ARG(QQuickItem *, item), Q_ARG(int, i)));
+        if (item && item->findChild<QObject *>(QStringLiteral("guildMemberName")) != nullptr) {
+            memberRowItem = item;
+            break;
+        }
+    }
+    QVERIFY(memberRowItem != nullptr);
+    QObject *memberName = memberRowItem->findChild<QObject *>(QStringLiteral("guildMemberName"));
+    QVERIFY(memberName != nullptr);
+    QCOMPARE(memberName->property("font").value<QFont>().pixelSize(), 14);
+
+    QObject *roomLabel = memberRowItem->findChild<QObject *>(QStringLiteral("guildMemberRoomLabel"));
+    QVERIFY(roomLabel != nullptr);
+    QObject *roomText = roomLabel->property("contentItem").value<QObject *>();
+    QVERIFY(roomText != nullptr);
+    QCOMPARE(roomText->property("font").value<QFont>().pixelSize(), 12);
+
+    QObject *liveLabel = memberRowItem->findChild<QObject *>(QStringLiteral("guildMemberLiveStateLabel"));
+    QVERIFY(liveLabel != nullptr);
+    QCOMPARE(liveLabel->property("font").value<QFont>().pixelSize(), 11);
 }
 
 void QmlInteractionTest::placesNavigationEntryAfterSidebarToggleAndBeforeBrand()

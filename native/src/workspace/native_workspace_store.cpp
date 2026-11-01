@@ -437,6 +437,8 @@ QJsonObject toJson(const DanmakuDisplaySettings &settings)
         {QStringLiteral("density"), densityToString(settings.density)},
         {QStringLiteral("fontFamily"), fontFamilyToString(settings.fontFamily)},
         {QStringLiteral("rendering"), renderingToString(settings.rendering)},
+        {QStringLiteral("showColors"), settings.showColors},
+        {QStringLiteral("showBadges"), settings.showBadges},
     };
 }
 
@@ -608,6 +610,8 @@ std::optional<DanmakuDisplaySettings> displayFromJson(const QJsonObject &object)
     settings.density = *density;
     settings.fontFamily = *fontFamily;
     settings.rendering = *rendering;
+    settings.showColors = object.value(QStringLiteral("showColors")).toBool(true);
+    settings.showBadges = object.value(QStringLiteral("showBadges")).toBool(true);
     return DanmakuGovernance::validatedDisplaySettings(settings);
 }
 

@@ -31,13 +31,17 @@ public:
 
     void retry() override { ++retries; }
 
-    void emitChat(const QString &id, const QString &text)
+    void emitChat(const QString &id, const QString &text, const QString &col = {}, const QString &nl = {})
     {
-        emit chatReceived(roomId_, {{QStringLiteral("type"), QStringLiteral("chatmsg")},
-                                    {QStringLiteral("rid"), roomId_},
-                                    {QStringLiteral("cid"), id},
-                                    {QStringLiteral("nn"), QStringLiteral("主播")},
-                                    {QStringLiteral("txt"), text}});
+        QMap<QString, QString> fields{
+            {QStringLiteral("type"), QStringLiteral("chatmsg")},
+            {QStringLiteral("rid"), roomId_},
+            {QStringLiteral("cid"), id},
+            {QStringLiteral("nn"), QStringLiteral("主播")},
+            {QStringLiteral("txt"), text}};
+        if (!col.isEmpty()) fields.insert(QStringLiteral("col"), col);
+        if (!nl.isEmpty()) fields.insert(QStringLiteral("nl"), nl);
+        emit chatReceived(roomId_, fields);
     }
 
     int starts = 0;
@@ -61,6 +65,7 @@ private slots:
     void appliesGovernanceBeforeQueueing();
     void clearsQueuesAndStopsAllOnShutdown();
     void handlesReentrantClearDuringStop();
+    void preservesColorAndNobleMetadata();
 };
 
 namespace {
@@ -236,6 +241,24 @@ void DanmakuSessionManagerTest::handlesReentrantClearDuringStop()
     QVERIFY(reentered);
     QCOMPARE(manager.activeSessionCount(), 0);
 }
+
+void DanmakuSessionManagerTest::preservesColorAndNobleMetadata()
+{
+    FakeDanmakuClient *fake = nullptr;
+    DanmakuSessionManager manager(
+        [&](const QString &roomId, QObject *) -> std::unique_ptr<DanmakuClient> {
+            auto client = std::make_unique<FakeDanmakuClient>(roomId);
+            fake = client.get();
+            return client;
+        });
+    manager.synchronize({eligible(QStringLiteral("63136"))});
+    fake->emitChat(QStringLiteral("c1"), QStringLiteral("red message"), QStringLiteral("1"), QStringLiteral("6"));
+    const auto msg = manager.takeNextMessage(QStringLiteral("63136"));
+    QVERIFY(msg.has_value());
+    QCOMPARE(msg->color, QStringLiteral("#fe0302"));
+    QCOMPARE(msg->nobleLevel, 6);
+}
+
 QTEST_GUILESS_MAIN(DanmakuSessionManagerTest)
 
 #include "danmaku_session_manager_test.moc"

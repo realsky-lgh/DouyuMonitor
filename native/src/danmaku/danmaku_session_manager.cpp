@@ -1,4 +1,5 @@
 #include "danmaku/danmaku_session_manager.h"
+#include "danmaku/douyu_danmaku_protocol.h"
 
 #include <algorithm>
 
@@ -190,9 +191,18 @@ void DanmakuSessionManager::handleChat(const QString &roomId,
     const QString id = rawChat.value(QStringLiteral("cid"),
                                      rawChat.value(QStringLiteral("msgid"),
                                                    rawChat.value(QStringLiteral("id"))));
+    const QString text = DouyuDanmakuProtocol::formatDanmakuText(
+        rawChat.value(QStringLiteral("txt")));
+    const QString color = DouyuDanmakuProtocol::resolveDanmakuColor(
+        rawChat.value(QStringLiteral("col")));
+    const int nobleLevel = rawChat.value(QStringLiteral("nl")).toInt();
+    const QString badgeName = rawChat.value(QStringLiteral("bnn"));
+    const int badgeLevel = rawChat.value(QStringLiteral("bl")).toInt();
+    const bool isRoomAdmin = rawChat.value(QStringLiteral("rg")).toInt() == 4;
+
     const auto message = DanmakuGovernance::sanitizeMessage(
-        roomId, id, rawChat.value(QStringLiteral("nn")), rawChat.value(QStringLiteral("txt")),
-        QDateTime::currentDateTimeUtc());
+        roomId, id, rawChat.value(QStringLiteral("nn")), text,
+        QDateTime::currentDateTimeUtc(), color, nobleLevel, badgeName, badgeLevel, isRoomAdmin);
     if (!message.has_value() || id.isEmpty() || it.value()->seenIds.contains(id)) return;
 
     it.value()->seenIds.insert(id);

@@ -28,6 +28,8 @@ QString unescapeStt(const QString &value);
 QString serializeStt(const QMap<QString, QString> &fields);
 QMap<QString, QString> parseStt(const QString &raw);
 QByteArray encodeFrame(const QString &payload, quint16 protocol = 689);
+QString resolveDanmakuColor(const QString &colorField);
+QString formatDanmakuText(const QString &text);
 
 class FrameDecoder final {
 public:

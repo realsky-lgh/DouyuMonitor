@@ -85,7 +85,7 @@ Rectangle {
                 placeholderText: "输入房间号"
                 color: root.textColor
                 placeholderTextColor: root.mutedTextColor
-                font.pixelSize: 18
+                font.pixelSize: 14
                 rightPadding: clearButton.visible ? 30 : 8
                 selectByMouse: true
                 onAccepted: root.submitRoom()
@@ -268,7 +268,7 @@ Rectangle {
                             text: roomRow.anchorName.length > 0 ? roomRow.anchorName.slice(0, 1) : roomRow.roomId.slice(0, 1)
                             color: root.textColor
                             font.bold: true
-                            font.pixelSize: 22
+                            font.pixelSize: 20
                         }
                     }
 
@@ -287,7 +287,10 @@ Rectangle {
                             text: roomRow.anchorName.trim().length > 0 ? roomRow.anchorName : roomRow.roomId
                             elide: Text.ElideRight
                             font.bold: true
-                            font.pixelSize: 24
+                            font.pixelSize: Theme.roomItemTitleSize
+                            ToolTip.visible: truncated && roomMouse.containsMouse
+                            ToolTip.text: text
+                            ToolTip.delay: 400
                         }
                         Text {
                             objectName: "sidebarRoomTitle"
@@ -295,16 +298,19 @@ Rectangle {
                             color: root.mutedTextColor
                             text: roomRow.title.trim().length > 0 ? roomRow.title : "斗鱼直播间"
                             elide: Text.ElideRight
-                            font.pixelSize: 18
+                            font.pixelSize: Theme.roomItemSubtitleSize
+                            ToolTip.visible: truncated && roomMouse.containsMouse
+                            ToolTip.text: text
+                            ToolTip.delay: 400
                         }
                         Row {
                             spacing: 6
 
                             Rectangle {
                                 anchors.verticalCenter: parent.verticalCenter
-                                width: 8
-                                height: 8
-                                radius: 4
+                                width: 7
+                                height: 7
+                                radius: 3.5
                                 color: roomRow.liveState === "online"
                                        ? Theme.online
                                        : (roomRow.liveState === "unknown" ? Theme.warning : Theme.mutedText)
@@ -316,7 +322,7 @@ Rectangle {
                                 text: roomRow.liveState === "online"
                                       ? "直播中"
                                       : (roomRow.liveState === "unknown" ? "检查中" : "未开播")
-                                font.pixelSize: 16
+                                font.pixelSize: Theme.roomItemStatusSize
                             }
                         }
                     }
@@ -444,7 +450,7 @@ Rectangle {
                 Text {
                     text: "设置"
                     color: root.textColor
-                    font.pixelSize: 18
+                    font.pixelSize: 14
                     anchors.verticalCenter: parent.verticalCenter
                 }
             }

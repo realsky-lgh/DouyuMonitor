@@ -113,6 +113,8 @@ QVariantMap DanmakuController::displaySettings() const
         {QStringLiteral("density"), densityString(display.density)},
         {QStringLiteral("fontFamily"), fontFamilyString(display.fontFamily)},
         {QStringLiteral("rendering"), renderingString(display.rendering)},
+        {QStringLiteral("showColors"), display.showColors},
+        {QStringLiteral("showBadges"), display.showBadges},
     };
 }
 
@@ -202,6 +204,10 @@ void DanmakuController::setDisplaySetting(const QString &key, const QVariant &va
         if (text == QStringLiteral("advanced")) updated.rendering = DanmakuRendering::Advanced;
         else if (text == QStringLiteral("native")) updated.rendering = DanmakuRendering::Native;
         else return;
+    } else if (key == QStringLiteral("showColors")) {
+        updated.showColors = value.toBool();
+    } else if (key == QStringLiteral("showBadges")) {
+        updated.showBadges = value.toBool();
     } else {
         return;
     }
@@ -273,6 +279,11 @@ QVariantMap DanmakuController::takeNextMessage(const QString &roomId)
         {QStringLiteral("roomId"), message->roomId},
         {QStringLiteral("nickname"), message->nickname},
         {QStringLiteral("text"), message->text},
+        {QStringLiteral("color"), message->color},
+        {QStringLiteral("nobleLevel"), message->nobleLevel},
+        {QStringLiteral("badgeName"), message->badgeName},
+        {QStringLiteral("badgeLevel"), message->badgeLevel},
+        {QStringLiteral("isRoomAdmin"), message->isRoomAdmin},
         {QStringLiteral("receivedAtUtc"), message->receivedAtUtc.toString(Qt::ISODateWithMs)},
     };
 }

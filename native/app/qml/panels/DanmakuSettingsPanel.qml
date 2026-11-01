@@ -14,7 +14,7 @@ Popup {
     property var fallbackDisplaySettings: ({
         "durationSeconds": 8, "fontSize": 24, "opacity": 0.9,
         "region": "full", "density": "normal", "fontFamily": "microsoft-yahei",
-        "rendering": "native"
+        "rendering": "native", "showColors": true, "showBadges": true
     })
     property var fallbackGovernanceSettings: ({
         "enabled": true, "keywordBlacklist": [], "duplicateWindowSeconds": 3,
@@ -72,6 +72,8 @@ Popup {
         danmakuController.setDisplaySetting("density", "normal")
         danmakuController.setDisplaySetting("fontFamily", "microsoft-yahei")
         danmakuController.setDisplaySetting("rendering", "native")
+        danmakuController.setDisplaySetting("showColors", true)
+        danmakuController.setDisplaySetting("showBadges", true)
     }
 
     component TabButton: ToolButton {
@@ -209,6 +211,61 @@ Popup {
                     spacing: 10
 
                     Text { text: "显示方式"; color: "#f4f6f8"; font.bold: true; font.pixelSize: 12 }
+
+                    Row {
+                        width: parent.width
+                        spacing: 8
+
+                        Column {
+                            width: (parent.width - parent.spacing) / 2
+                            spacing: 4
+                            Text { text: "弹幕色彩"; color: "#d6dde5"; font.pixelSize: 11 }
+                            Row {
+                                width: parent.width; spacing: 3
+                                SegmentButton {
+                                    objectName: "danmakuColorMultiBtn"
+                                    text: "多彩"
+                                    valueToken: "true"
+                                    settingKey: "showColors"
+                                    selectedToken: root.displaySettings.showColors !== false ? "true" : "false"
+                                    onClicked: if (root.danmakuController) root.danmakuController.setDisplaySetting("showColors", true)
+                                }
+                                SegmentButton {
+                                    objectName: "danmakuColorWhiteBtn"
+                                    text: "纯白"
+                                    valueToken: "false"
+                                    settingKey: "showColors"
+                                    selectedToken: root.displaySettings.showColors !== false ? "true" : "false"
+                                    onClicked: if (root.danmakuController) root.danmakuController.setDisplaySetting("showColors", false)
+                                }
+                            }
+                        }
+
+                        Column {
+                            width: (parent.width - parent.spacing) / 2
+                            spacing: 4
+                            Text { text: "粉丝与身份徽章"; color: "#d6dde5"; font.pixelSize: 11 }
+                            Row {
+                                width: parent.width; spacing: 3
+                                SegmentButton {
+                                    objectName: "danmakuBadgesShowBtn"
+                                    text: "显示"
+                                    valueToken: "true"
+                                    settingKey: "showBadges"
+                                    selectedToken: root.displaySettings.showBadges !== false ? "true" : "false"
+                                    onClicked: if (root.danmakuController) root.danmakuController.setDisplaySetting("showBadges", true)
+                                }
+                                SegmentButton {
+                                    objectName: "danmakuBadgesHideBtn"
+                                    text: "隐藏"
+                                    valueToken: "false"
+                                    settingKey: "showBadges"
+                                    selectedToken: root.displaySettings.showBadges !== false ? "true" : "false"
+                                    onClicked: if (root.danmakuController) root.danmakuController.setDisplaySetting("showBadges", false)
+                                }
+                            }
+                        }
+                    }
 
                     Column {
                         width: parent.width

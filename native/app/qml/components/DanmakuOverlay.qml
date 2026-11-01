@@ -22,6 +22,8 @@ Item {
     readonly property string density: displaySettings.density || "normal"
     readonly property string fontFamily: displaySettings.fontFamily === "simhei" ? "SimHei" : "Microsoft YaHei"
     readonly property string rendering: displaySettings.rendering || "native"
+    readonly property bool showColors: displaySettings.showColors !== false
+    readonly property bool showBadges: displaySettings.showBadges !== false
     readonly property bool presentationSuspended: !root.visible
                                                   || !!(controller && controller.presentationSuspended)
     readonly property int launchInterval: density === "massive" ? 80 : density === "reduced" ? 360 : 180
@@ -36,13 +38,28 @@ Item {
         text: root.pendingMessage.text || ""
         font.family: root.fontFamily
         font.pixelSize: root.fontSize
-        font.bold: root.rendering === "advanced"
+        font.bold: root.rendering === "advanced" || Number(root.pendingMessage.nobleLevel || 0) >= 5
     }
 
     TextMetrics {
         id: localMetrics
         font.family: root.fontFamily
         font.pixelSize: root.fontSize
+        font.bold: true
+    }
+
+    TextMetrics {
+        id: badgeMetrics
+        font.family: root.fontFamily
+        font.pixelSize: Math.max(9, Math.round(root.fontSize * 0.52))
+        font.bold: true
+    }
+
+    TextMetrics {
+        id: adminMetrics
+        text: "房管"
+        font.family: root.fontFamily
+        font.pixelSize: Math.max(9, Math.round(root.fontSize * 0.52))
         font.bold: true
     }
 
@@ -136,7 +153,19 @@ Item {
         if (!hasPendingMessage()) pendingMessage = controller.takeNextMessage(roomId)
         if (!hasPendingMessage()) return
 
-        const itemWidth = Math.ceil(metrics.advanceWidth) + 4
+        const hasBadge = root.showBadges && (pendingMessage.badgeName && pendingMessage.badgeName.length > 0
+                          && Number(pendingMessage.badgeLevel || 0) > 0)
+        let badgeExtra = 0
+        if (hasBadge) {
+            badgeMetrics.text = String(pendingMessage.badgeLevel || "") + " " + pendingMessage.badgeName
+            badgeExtra += Math.ceil(badgeMetrics.advanceWidth) + 12 + 6
+        }
+        if (root.showBadges && pendingMessage.isRoomAdmin) {
+            badgeExtra += Math.ceil(adminMetrics.advanceWidth) + 10 + 6
+        }
+
+        const isBordered = Number(pendingMessage.nobleLevel || 0) >= 5
+        const itemWidth = Math.ceil(metrics.advanceWidth) + badgeExtra + (isBordered ? 16 : 4)
         const itemDuration = calculateDuration(width, itemWidth, displaySettings.durationSeconds)
         const candidate = {
             width: itemWidth,
@@ -152,6 +181,11 @@ Item {
 
         const line = danmakuLineComponent.createObject(root, {
             messageText: pendingMessage.text,
+            textColor: root.showColors ? (pendingMessage.color || "") : "",
+            nobleLevel: Number(pendingMessage.nobleLevel || 0),
+            badgeName: root.showBadges ? (pendingMessage.badgeName || "") : "",
+            badgeLevel: root.showBadges ? Number(pendingMessage.badgeLevel || 0) : 0,
+            isRoomAdmin: root.showBadges ? !!pendingMessage.isRoomAdmin : false,
             laneIndex: lane.index,
             laneTop: safeTopInset + lane.top,
             lineWidth: candidate.width,

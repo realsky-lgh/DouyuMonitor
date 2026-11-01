@@ -53,6 +53,11 @@ struct DanmakuMessage {
     QString nickname;
     QString text;
     QDateTime receivedAtUtc;
+    QString color;
+    int nobleLevel = 0;
+    QString badgeName;
+    int badgeLevel = 0;
+    bool isRoomAdmin = false;
 };
 
 struct DanmakuConnectionStatus {
@@ -70,6 +75,8 @@ struct DanmakuDisplaySettings {
     DanmakuDensity density = DanmakuDensity::Normal;
     DanmakuFontFamily fontFamily = DanmakuFontFamily::MicrosoftYaHei;
     DanmakuRendering rendering = DanmakuRendering::Native;
+    bool showColors = true;
+    bool showBadges = true;
 
     bool operator==(const DanmakuDisplaySettings &) const = default;
 };

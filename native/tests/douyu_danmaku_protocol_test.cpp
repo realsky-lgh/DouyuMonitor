@@ -16,6 +16,8 @@ private slots:
     void rejectsInvalidUtf8();
     void rejectsOversizedFrames();
     void roundTripsEscapedSttFields();
+    void resolvesDanmakuColorsCorrectly();
+    void formatsDanmakuEmotes();
 };
 
 void DouyuDanmakuProtocolTest::encodesLoginFrameWithLittleEndianLengths()
@@ -93,6 +95,30 @@ void DouyuDanmakuProtocolTest::roundTripsEscapedSttFields()
     const auto parsed = DouyuDanmakuProtocol::parseStt(
         DouyuDanmakuProtocol::serializeStt({{QStringLiteral("txt"), QStringLiteral("a@b/c")}}));
     QCOMPARE(parsed.value(QStringLiteral("txt")), QStringLiteral("a@b/c"));
+}
+
+void DouyuDanmakuProtocolTest::resolvesDanmakuColorsCorrectly()
+{
+    using DouyuDanmakuProtocol::resolveDanmakuColor;
+    QCOMPARE(resolveDanmakuColor(QString()), QString());
+    QCOMPARE(resolveDanmakuColor(QStringLiteral("0")), QString());
+    QCOMPARE(resolveDanmakuColor(QStringLiteral("1")), QStringLiteral("#fe0302"));
+    QCOMPARE(resolveDanmakuColor(QStringLiteral("2")), QStringLiteral("#00a0e9"));
+    QCOMPARE(resolveDanmakuColor(QStringLiteral("3")), QStringLiteral("#1fe600"));
+    QCOMPARE(resolveDanmakuColor(QStringLiteral("4")), QStringLiteral("#ffa200"));
+    QCOMPARE(resolveDanmakuColor(QStringLiteral("5")), QStringLiteral("#8938f7"));
+    QCOMPARE(resolveDanmakuColor(QStringLiteral("6")), QStringLiteral("#ff4a80"));
+    QCOMPARE(resolveDanmakuColor(QStringLiteral("#112233")), QStringLiteral("#112233"));
+    QCOMPARE(resolveDanmakuColor(QStringLiteral("16711680")), QStringLiteral("#ff0000")); // 0xFF0000
+    QCOMPARE(resolveDanmakuColor(QStringLiteral("invalid")), QString());
+}
+
+void DouyuDanmakuProtocolTest::formatsDanmakuEmotes()
+{
+    using DouyuDanmakuProtocol::formatDanmakuText;
+    QCOMPARE(formatDanmakuText(QStringLiteral("普通弹幕")), QStringLiteral("普通弹幕"));
+    QCOMPARE(formatDanmakuText(QStringLiteral("主播牛逼[emot:dy005]")), QStringLiteral("主播牛逼[666]"));
+    QCOMPARE(formatDanmakuText(QStringLiteral("[emot:dy001][emot:dy004]啥情况")), QStringLiteral("[赞][问号]啥情况"));
 }
 
 QTEST_GUILESS_MAIN(DouyuDanmakuProtocolTest)

@@ -30,4 +30,17 @@ QtObject {
     readonly property int fontMedium: 16
     readonly property int fontLarge: 18
     readonly property int fontTitle: 22
+
+    // Sidebar & Library typography standards
+    readonly property int roomItemTitleSize: fontMedium    // 16
+    readonly property int roomItemSubtitleSize: fontSmall  // 13
+    readonly property int roomItemStatusSize: 12
+
+    // Guild Navigation typography standards
+    readonly property int guildTitleSize: fontMedium       // 16
+    readonly property int guildSectionTitleSize: fontSmall // 13
+    readonly property int guildSubheaderSize: 12
+    readonly property int guildMemberNameSize: fontBody    // 14
+    readonly property int guildMemberSubSize: 12
+    readonly property int guildBadgeTextSize: fontTiny     // 11
 }

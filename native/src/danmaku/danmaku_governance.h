@@ -30,7 +30,12 @@ std::optional<DanmakuMessage> sanitizeMessage(const QString &roomId,
                                               const QString &id,
                                               const QString &nickname,
                                               const QString &text,
-                                              const QDateTime &receivedAtUtc);
+                                              const QDateTime &receivedAtUtc,
+                                              const QString &color = {},
+                                              int nobleLevel = 0,
+                                              const QString &badgeName = {},
+                                              int badgeLevel = 0,
+                                              bool isRoomAdmin = false);
 
 DanmakuGovernanceRuntime createRuntime();
 DanmakuGovernanceRuntime createDanmakuGovernanceRuntime();

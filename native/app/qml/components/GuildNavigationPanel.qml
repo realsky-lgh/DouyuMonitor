@@ -330,7 +330,7 @@ Rectangle {
             objectName: "guildNavigationTitle"
             color: Theme.text
             font.bold: true
-            font.pixelSize: 15
+            font.pixelSize: Theme.guildTitleSize
             text: "CSTG狼团S1"
         }
 
@@ -345,13 +345,13 @@ Rectangle {
             id: searchInput
             objectName: "guildNavigationSearch"
             width: parent.width
-            height: 30
+            height: 34
             placeholderText: "搜索主播或房间号"
             color: Theme.text
             placeholderTextColor: Theme.mutedText
-            rightPadding: clearButton.visible ? 26 : 8
+            rightPadding: clearButton.visible ? 28 : 8
             selectByMouse: true
-            font.pixelSize: 11
+            font.pixelSize: Theme.guildSectionTitleSize
             background: Rectangle {
                 radius: 4
                 color: Theme.well
@@ -388,7 +388,7 @@ Rectangle {
         Flickable {
             id: teamScroll
             width: parent.width
-            height: Math.max(0, parent.height - searchInput.height - 50)
+            height: Math.max(0, parent.height - searchInput.height - 54)
             clip: true
             contentWidth: width
             contentHeight: teamColumn.implicitHeight
@@ -406,19 +406,20 @@ Rectangle {
                     delegate: Item {
                         id: rowItem
                         width: teamColumn.width
-                        height: model.rowType === "header" ? 20
-                              : (model.rowType === "subheader" ? 18 : 46)
+                        height: model.rowType === "header" ? 24
+                              : (model.rowType === "subheader" ? 20
+                              : (memberRow.visible ? memberRow.height : 48))
 
                         Text {
                             objectName: "guildTeamTitle"
                             anchors.left: parent.left
                             anchors.right: parent.right
                             anchors.top: parent.top
-                            height: visible ? 20 : 0
+                            height: visible ? 24 : 0
                             visible: model.rowType === "header"
                             color: Theme.mutedText
                             font.bold: true
-                            font.pixelSize: 11
+                            font.pixelSize: Theme.guildSectionTitleSize
                             elide: Text.ElideRight
                             text: model.title
                         }
@@ -429,20 +430,21 @@ Rectangle {
                             anchors.leftMargin: 8
                             anchors.right: parent.right
                             anchors.top: parent.top
-                            height: visible ? 18 : 0
+                            height: visible ? 20 : 0
                             visible: model.rowType === "subheader"
                             color: Theme.mutedText
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.guildSubheaderSize
                             elide: Text.ElideRight
                             text: model.title
                         }
 
                         GuildMemberRow {
+                            id: memberRow
                             objectName: "guildMemberRow"
                             anchors.left: parent.left
                             anchors.right: parent.right
                             anchors.top: parent.top
-                            height: visible ? (confirming ? 84 : 46) : 0
+                            height: visible ? (confirming ? 88 : 48) : 0
                             visible: model.rowType === "member"
                             member: root.memberForRow(model.memberId, model.anchorName,
                                                       model.roomId, model.roomStatus,

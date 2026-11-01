@@ -43,7 +43,7 @@ ApplicationWindow {
                                              ? workspaceModel.navigationVisible
                                              : navigationFallbackVisible
     readonly property int roomSidebarWidth: sidebarVisible && !navigationVisible ? 360 : 0
-    readonly property int navigationWidth: navigationVisible ? 310 : 0
+    readonly property int navigationWidth: navigationVisible ? 320 : 0
     readonly property int leftPanelWidth: Math.max(roomSidebarWidth, navigationWidth)
     readonly property int sidebarWidth: roomSidebarWidth
     readonly property var roomModel: appController
