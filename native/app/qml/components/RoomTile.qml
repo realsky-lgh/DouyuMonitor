@@ -670,6 +670,26 @@ FocusScope {
                     onMoved: {
                         if (root.controller) root.controller.setVolume(root.roomId, Math.round(value * 100))
                     }
+                    background: Rectangle {
+                        objectName: "roomVolumeSliderBackground"
+                        x: roomVolumeSlider.leftPadding
+                        y: roomVolumeSlider.topPadding + (roomVolumeSlider.availableHeight - height) / 2
+                        implicitWidth: 76
+                        implicitHeight: 4
+                        width: roomVolumeSlider.availableWidth
+                        height: implicitHeight
+                        radius: 2
+                        color: roomVolumeSlider.palette.dark
+                        scale: roomVolumeSlider.horizontal && roomVolumeSlider.mirrored ? -1 : 1
+
+                        Rectangle {
+                            objectName: "roomVolumeSliderProgress"
+                            width: roomVolumeSlider.position * parent.width
+                            height: parent.height
+                            radius: 2
+                            color: roomVolumeSlider.palette.midlight
+                        }
+                    }
                     handle: Rectangle {
                         objectName: "roomVolumeSliderHandle"
                         implicitWidth: 10

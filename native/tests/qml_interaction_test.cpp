@@ -11,6 +11,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QPalette>
 #include <QtTest/QtTest>
 
 #include "ui/mpv_quick_item.h"
@@ -2810,6 +2811,13 @@ void QmlInteractionTest::exposesRoomVolumeAndRefreshControls()
     QVERIFY(sliderHandle != nullptr);
     QVERIFY(sliderHandle->property("implicitWidth").toDouble() <= 14.0);
     QVERIFY(sliderHandle->property("implicitHeight").toDouble() <= 14.0);
+    QObject *sliderBg = tile->findChild<QObject *>(QStringLiteral("roomVolumeSliderBackground"));
+    QObject *sliderProgress = tile->findChild<QObject *>(QStringLiteral("roomVolumeSliderProgress"));
+    QVERIFY(sliderBg != nullptr);
+    QVERIFY(sliderProgress != nullptr);
+    const QPalette sliderPalette = slider->property("palette").value<QPalette>();
+    QCOMPARE(sliderBg->property("color").value<QColor>(), sliderPalette.dark().color());
+    QCOMPARE(sliderProgress->property("color").value<QColor>(), sliderPalette.midlight().color());
 
     slider->setProperty("value", 0.35);
     QVERIFY(QMetaObject::invokeMethod(slider, "moved"));
