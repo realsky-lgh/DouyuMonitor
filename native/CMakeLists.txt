@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(DouyuMonitorNative VERSION 0.2.33 LANGUAGES CXX)
+project(DouyuMonitorNative VERSION 0.2.34 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

@@ -145,6 +145,38 @@ int main(int argc, char *argv[])
     if (qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) {
         qputenv("QT_QPA_PLATFORM", "xcb;wayland");
     }
+
+    // Ensure cursor search paths include user-installed icon directories (~/.local/share/icons).
+    // libXcursor's compiled-in default (~/.icons:/usr/share/icons:/usr/share/pixmaps) misses ~/.local/share/icons,
+    // which causes user-installed cursor themes to fail loading and fallback to the legacy X11 core cursor.
+    const QString home = QDir::homePath();
+    const QString localIcons = home + QStringLiteral("/.local/share/icons");
+    if (qEnvironmentVariableIsEmpty("XCURSOR_PATH")) {
+        const QString cursorPath = QStringLiteral("%1:%2/.icons:/usr/local/share/icons:/usr/share/icons:/usr/share/pixmaps")
+            .arg(localIcons, home);
+        qputenv("XCURSOR_PATH", cursorPath.toLocal8Bit());
+    } else {
+        const QString existing = QString::fromLocal8Bit(qgetenv("XCURSOR_PATH"));
+        if (!existing.contains(localIcons)) {
+            const QString augmented = localIcons + QStringLiteral(":") + existing;
+            qputenv("XCURSOR_PATH", augmented.toLocal8Bit());
+        }
+    }
+
+    if (qEnvironmentVariableIsEmpty("XCURSOR_THEME")) {
+        const QString defaultThemeFile = home + QStringLiteral("/.icons/default/index.theme");
+        if (QFileInfo::exists(defaultThemeFile)) {
+            QSettings indexTheme(defaultThemeFile, QSettings::IniFormat);
+            const QString inherits = indexTheme.value(QStringLiteral("Icon Theme/Inherits")).toString();
+            if (!inherits.isEmpty()) {
+                qputenv("XCURSOR_THEME", inherits.toLocal8Bit());
+            }
+        }
+    }
+
+    if (qEnvironmentVariableIsEmpty("XCURSOR_SIZE")) {
+        qputenv("XCURSOR_SIZE", "24");
+    }
 #endif
     if (qEnvironmentVariableIsEmpty("QSG_RENDER_LOOP")) {
         qputenv("QSG_RENDER_LOOP", "threaded");

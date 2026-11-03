@@ -35,11 +35,25 @@ img.save('$TARGET_DIR/douyu_monitor.png')
 "
 gtk-update-icon-cache -f -t "$HOME/.local/share/icons/hicolor" 2>/dev/null || true
 
+# Ensure compatibility symlinks in ~/.icons for older X11 libXcursor lookups
+if [ -d "$HOME/.local/share/icons" ]; then
+    mkdir -p "$HOME/.icons"
+    for dir in "$HOME/.local/share/icons"/*; do
+        if [ -d "$dir" ] && [ ! -e "$HOME/.icons/$(basename "$dir")" ]; then
+            ln -s "$dir" "$HOME/.icons/$(basename "$dir")" 2>/dev/null || true
+        fi
+    done
+fi
+
 cat > "$TARGET_DIR/launch.sh" << 'EOF'
 #!/usr/bin/env bash
 set -e
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$APP_DIR"
+
+if [ -z "$XCURSOR_PATH" ]; then
+    export XCURSOR_PATH="$HOME/.local/share/icons:$HOME/.icons:/usr/local/share/icons:/usr/share/icons:/usr/share/pixmaps"
+fi
 
 if [[ "$ALL_PROXY" == socks://* ]]; then
     export ALL_PROXY="socks5://${ALL_PROXY#socks://}"

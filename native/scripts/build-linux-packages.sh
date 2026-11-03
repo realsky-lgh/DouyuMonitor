@@ -69,6 +69,10 @@ set -e
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$APP_DIR"
 
+if [ -z "$XCURSOR_PATH" ]; then
+    export XCURSOR_PATH="$HOME/.local/share/icons:$HOME/.icons:/usr/local/share/icons:/usr/share/icons:/usr/share/pixmaps"
+fi
+
 if [[ "$ALL_PROXY" == socks://* ]]; then
     export ALL_PROXY="socks5://${ALL_PROXY#socks://}"
 fi
