@@ -140,12 +140,6 @@ int main(int argc, char *argv[])
     // Ignore test-only/headless overrides so Explorer launches remain reliable.
     qputenv("QT_QPA_PLATFORM", "windows");
 #elif defined(Q_OS_LINUX)
-    // On Linux desktop, frameless window management (minimize, maximize, drag)
-    // is fully supported and reliable under xcb (X11 / XWayland). Prefer xcb with wayland fallback.
-    if (qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) {
-        qputenv("QT_QPA_PLATFORM", "xcb;wayland");
-    }
-
     // Ensure cursor search paths include user-installed icon directories (~/.local/share/icons).
     // libXcursor's compiled-in default (~/.icons:/usr/share/icons:/usr/share/pixmaps) misses ~/.local/share/icons,
     // which causes user-installed cursor themes to fail loading and fallback to the legacy X11 core cursor.

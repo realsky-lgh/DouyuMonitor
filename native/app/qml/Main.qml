@@ -145,12 +145,14 @@ ApplicationWindow {
 
     onVisibilityChanged: function(newVisibility) {
         if (!appController) return
-        if (newVisibility === Window.Minimized && !appController.backgroundHosted
-                && appController.minimizeWindow) {
-            appController.minimizeWindow()
-        } else if (newVisibility !== Window.Minimized && appController.windowMinimized
-                   && appController.restoreFromMinimized) {
-            appController.restoreFromMinimized()
+        if (Qt.platform.os === "windows") {
+            if (newVisibility === Window.Minimized && !appController.backgroundHosted
+                    && appController.minimizeWindow) {
+                appController.minimizeWindow()
+            } else if (newVisibility !== Window.Minimized && appController.windowMinimized
+                       && appController.restoreFromMinimized) {
+                appController.restoreFromMinimized()
+            }
         }
     }
 
