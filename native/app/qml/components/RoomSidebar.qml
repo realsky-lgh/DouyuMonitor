@@ -234,22 +234,33 @@ Rectangle {
                         anchors.fill: parent
                         radius: Theme.radiusSmall
                         color: primary
-                               ? Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.08)
+                               ? Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.12)
                                : (roomMouse.containsMouse ? Theme.controlSurface : "transparent")
                         border.color: primary
-                                      ? Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.6)
-                                      : "transparent"
-                        border.width: primary ? 1 : 0
+                                      ? Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.7)
+                                      : (roomMouse.containsMouse ? Theme.border : "transparent")
+                        border.width: 1
+                    }
+
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 3
+                        height: 32
+                        radius: 1.5
+                        color: root.accentColor
+                        visible: primary
                     }
 
                     Rectangle {
                         id: avatar
                         x: 8
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 48
-                        height: 48
-                        radius: 24
+                        width: 38
+                        height: 38
+                        radius: 19
                         color: primary ? Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.18) : Theme.well
+
                         Image {
                             id: roomAvatarImage
                             objectName: "roomSidebarAvatarImage"
@@ -268,17 +279,30 @@ Rectangle {
                             text: roomRow.anchorName.length > 0 ? roomRow.anchorName.slice(0, 1) : roomRow.roomId.slice(0, 1)
                             color: root.textColor
                             font.bold: true
-                            font.pixelSize: 20
+                            font.pixelSize: 16
+                        }
+
+                        Rectangle {
+                            width: 10
+                            height: 10
+                            radius: 5
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            color: roomRow.liveState === "online"
+                                   ? Theme.online
+                                   : (roomRow.liveState === "unknown" ? Theme.warning : Theme.mutedText)
+                            border.width: 1.5
+                            border.color: root.surfaceColor
                         }
                     }
 
                     Column {
                         anchors.left: avatar.right
-                        anchors.leftMargin: 10
+                        anchors.leftMargin: 8
                         anchors.right: roomActionBar.left
                         anchors.rightMargin: 6
                         anchors.verticalCenter: parent.verticalCenter
-                        spacing: 4
+                        spacing: 2
 
                         Text {
                             objectName: "sidebarRoomAnchorName"
@@ -303,28 +327,6 @@ Rectangle {
                             ToolTip.text: text
                             ToolTip.delay: 400
                         }
-                        Row {
-                            spacing: 6
-
-                            Rectangle {
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: 7
-                                height: 7
-                                radius: 3.5
-                                color: roomRow.liveState === "online"
-                                       ? Theme.online
-                                       : (roomRow.liveState === "unknown" ? Theme.warning : Theme.mutedText)
-                            }
-                            Text {
-                                color: roomRow.liveState === "online"
-                                       ? Theme.online
-                                       : (roomRow.liveState === "unknown" ? Theme.warning : root.mutedTextColor)
-                                text: roomRow.liveState === "online"
-                                      ? "直播中"
-                                      : (roomRow.liveState === "unknown" ? "检查中" : "未开播")
-                                font.pixelSize: Theme.roomItemStatusSize
-                            }
-                        }
                     }
 
                     Row {
@@ -333,69 +335,81 @@ Rectangle {
                         anchors.right: parent.right
                         anchors.rightMargin: 6
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 140
-                        height: 28
+                        width: 130
+                        height: 26
                         spacing: 2
+
                         ToolButton {
-                        width: 28; height: 28
-                        Accessible.name: favorite ? "取消收藏" : "收藏"
-                        ToolTip.visible: hovered; ToolTip.text: Accessible.name
-                        onClicked: if (root.controller) root.controller.setFavorite(roomRow.roomId, !roomRow.favorite)
-                        contentItem: Image {
-                            objectName: "roomFavoriteIcon"
-                            anchors.centerIn: parent
-                            width: 16
-                            height: 16
-                            source: Qt.resolvedUrl("../assets/icons/star.svg")
-                            opacity: roomRow.favorite ? 1 : 0.55
-                        }
-                        background: Rectangle { radius: 4; color: parent.hovered ? "#2a211c" : "transparent" }
-                    }
-                    ToolButton {
-                        objectName: "moveRoomUpButton"
-                        width: 28; height: 28
-                        enabled: index > 0
-                        Accessible.name: "上移"
-                        ToolTip.visible: hovered; ToolTip.text: Accessible.name
-                        onClicked: if (root.controller) root.controller.moveRoom(roomRow.roomId, -1)
-                        contentItem: Image { anchors.centerIn: parent; width: 16; height: 16; source: Qt.resolvedUrl("../assets/icons/chevron-up.svg") }
-                        background: Rectangle { radius: 4; color: parent.hovered ? "#252c34" : "transparent" }
-                    }
-                    ToolButton {
-                        objectName: "moveRoomDownButton"
-                        width: 28; height: 28
-                        enabled: index < roomList.count - 1
-                        Accessible.name: "下移"
-                        ToolTip.visible: hovered; ToolTip.text: Accessible.name
-                        onClicked: if (root.controller) root.controller.moveRoom(roomRow.roomId, 1)
-                        contentItem: Image { anchors.centerIn: parent; width: 16; height: 16; source: Qt.resolvedUrl("../assets/icons/chevron-down.svg") }
-                        background: Rectangle { radius: 4; color: parent.hovered ? "#252c34" : "transparent" }
-                    }
-                    ToolButton {
-                        width: 28; height: 28
-                        Accessible.name: root.workspaceModel && root.workspaceModel.audioMode === "multi"
-                                         ? (audioFocused ? "静音直播间" : "取消直播间静音")
-                                         : (audioFocused ? "关闭声音焦点" : "播放声音")
-                        ToolTip.visible: hovered; ToolTip.text: Accessible.name
-                        onClicked: {
-                            if (!root.controller) return
-                            if (root.workspaceModel && root.workspaceModel.audioMode === "multi") {
-                                root.controller.setRoomMuted(roomRow.roomId, !roomRow.muted)
-                            } else {
-                                root.controller.setAudioRoom(roomRow.audioFocused ? "" : roomRow.roomId)
+                            width: 24; height: 26
+                            Accessible.name: favorite ? "取消收藏" : "收藏"
+                            ToolTip.visible: hovered; ToolTip.text: Accessible.name
+                            onClicked: if (root.controller) root.controller.setFavorite(roomRow.roomId, !roomRow.favorite)
+                            contentItem: Image {
+                                objectName: "roomFavoriteIcon"
+                                anchors.centerIn: parent
+                                width: 14
+                                height: 14
+                                source: Qt.resolvedUrl("../assets/icons/star.svg")
+                                opacity: roomRow.favorite ? 1 : 0.55
                             }
+                            background: Rectangle { radius: 4; color: parent.hovered ? "#2a211c" : "transparent" }
                         }
-                        contentItem: Image { anchors.centerIn: parent; width: 16; height: 16; source: Qt.resolvedUrl("../assets/icons/volume-2.svg"); opacity: audioFocused ? 1 : 0.62 }
-                        background: Rectangle { radius: 4; color: parent.hovered ? "#252c34" : "transparent" }
+                        ToolButton {
+                            objectName: "moveRoomUpButton"
+                            width: 24; height: 26
+                            enabled: index > 0
+                            Accessible.name: "上移"
+                            ToolTip.visible: hovered; ToolTip.text: Accessible.name
+                            onClicked: if (root.controller) root.controller.moveRoom(roomRow.roomId, -1)
+                            contentItem: Image { anchors.centerIn: parent; width: 14; height: 14; source: Qt.resolvedUrl("../assets/icons/chevron-up.svg") }
+                            background: Rectangle { radius: 4; color: parent.hovered ? "#252c34" : "transparent" }
+                        }
+                        ToolButton {
+                            objectName: "moveRoomDownButton"
+                            width: 24; height: 26
+                            enabled: index < roomList.count - 1
+                            Accessible.name: "下移"
+                            ToolTip.visible: hovered; ToolTip.text: Accessible.name
+                            onClicked: if (root.controller) root.controller.moveRoom(roomRow.roomId, 1)
+                            contentItem: Image { anchors.centerIn: parent; width: 14; height: 14; source: Qt.resolvedUrl("../assets/icons/chevron-down.svg") }
+                            background: Rectangle { radius: 4; color: parent.hovered ? "#252c34" : "transparent" }
+                        }
+                        ToolButton {
+                            width: 24; height: 26
+                            Accessible.name: root.workspaceModel && root.workspaceModel.audioMode === "multi"
+                                             ? (audioFocused ? "静音直播间" : "取消直播间静音")
+                                             : (audioFocused ? "关闭声音焦点" : "播放声音")
+                            ToolTip.visible: hovered; ToolTip.text: Accessible.name
+                            onClicked: {
+                                if (!root.controller) return
+                                if (root.workspaceModel && root.workspaceModel.audioMode === "multi") {
+                                    root.controller.setRoomMuted(roomRow.roomId, !roomRow.muted)
+                                } else {
+                                    root.controller.setAudioRoom(roomRow.audioFocused ? "" : roomRow.roomId)
+                                }
+                            }
+                            contentItem: Image { anchors.centerIn: parent; width: 14; height: 14; source: Qt.resolvedUrl("../assets/icons/volume-2.svg"); opacity: audioFocused ? 1 : 0.62 }
+                            background: Rectangle { radius: 4; color: parent.hovered ? "#252c34" : "transparent" }
+                        }
+                        ToolButton {
+                            width: 24; height: 26
+                            Accessible.name: "移除房间"
+                            ToolTip.visible: hovered; ToolTip.text: Accessible.name
+                            onClicked: root.requestRoomRemoval(roomRow.roomId)
+                            contentItem: Image { anchors.centerIn: parent; width: 14; height: 14; source: Qt.resolvedUrl("../assets/icons/x.svg"); opacity: parent.hovered ? 1 : 0.62 }
+                            background: Rectangle { radius: 4; color: parent.hovered ? "#4b1c1c" : "transparent" }
+                        }
                     }
-                    ToolButton {
-                        width: 28; height: 28
-                        Accessible.name: "移除房间"
-                        ToolTip.visible: hovered; ToolTip.text: Accessible.name
-                        onClicked: root.requestRoomRemoval(roomRow.roomId)
-                        contentItem: Image { anchors.centerIn: parent; width: 16; height: 16; source: Qt.resolvedUrl("../assets/icons/x.svg"); opacity: parent.hovered ? 1 : 0.62 }
-                        background: Rectangle { radius: 4; color: parent.hovered ? "#4b1c1c" : "transparent" }
-                        }
+
+                    MouseArea {
+                        id: roomSelectArea
+                        anchors.left: parent.left
+                        anchors.right: roomActionBar.left
+                        anchors.top: parent.top
+                        anchors.bottom: parent.bottom
+                        cursorShape: Qt.PointingHandCursor
+                        acceptedButtons: Qt.LeftButton
+                        onClicked: if (root.controller) root.controller.setPrimaryRoom(roomRow.roomId)
                     }
 
                     MouseArea { id: roomMouse; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }

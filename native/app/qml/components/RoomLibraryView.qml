@@ -126,31 +126,41 @@ Item {
             Rectangle {
                 anchors.fill: parent
                 radius: Theme.radiusSmall
-                color: entry.active
-                       ? Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.08)
+                color: (entry && entry.active)
+                       ? Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.12)
                        : (historyMouse.containsMouse ? Theme.controlSurface : "transparent")
-                border.color: entry.active
-                              ? Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.6)
-                              : "transparent"
-                border.width: entry.active ? 1 : 0
+                border.color: (entry && entry.active)
+                              ? Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.7)
+                              : (historyMouse.containsMouse ? Theme.border : "transparent")
+                border.width: 1
+            }
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                width: 3
+                height: 32
+                radius: 1.5
+                color: root.accentColor
+                visible: Boolean(entry && entry.active)
             }
 
             Rectangle {
                 id: avatar
                 x: 8
                 anchors.verticalCenter: parent.verticalCenter
-                width: 48
-                height: 48
-                radius: 24
-                color: entry.active ? Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.18) : Theme.well
+                width: 38
+                height: 38
+                radius: 19
+                color: (entry && entry.active) ? Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.18) : Theme.well
 
                 Image {
                     id: roomAvatarImage
                     objectName: "roomHistoryAvatarImage"
                     anchors.fill: parent
                     anchors.margins: 1
-                    source: entry.avatarUrl
-                    visible: entry.avatarUrl && entry.avatarUrl.toString().length > 0
+                    source: (entry && entry.avatarUrl) ? entry.avatarUrl : ""
+                    visible: Boolean(entry && entry.avatarUrl && entry.avatarUrl.toString().length > 0)
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
                     smooth: true
@@ -162,18 +172,29 @@ Item {
                     visible: !roomAvatarImage.visible
                     color: root.textColor
                     font.bold: true
-                    font.pixelSize: 20
-                    text: entry.anchorName.length > 0 ? entry.anchorName.slice(0, 1) : entry.roomId.slice(0, 1)
+                    font.pixelSize: 16
+                    text: (entry && entry.anchorName && entry.anchorName.length > 0) ? entry.anchorName.slice(0, 1) : ((entry && entry.roomId) ? entry.roomId.slice(0, 1) : "")
+                }
+
+                Rectangle {
+                    width: 10
+                    height: 10
+                    radius: 5
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    color: (entry && (entry.active || entry.online)) ? Theme.online : Theme.mutedText
+                    border.width: 1.5
+                    border.color: root.surfaceColor
                 }
             }
 
             Column {
                 anchors.left: avatar.right
-                anchors.leftMargin: 10
+                anchors.leftMargin: 8
                 anchors.right: roomActionBar.left
                 anchors.rightMargin: 6
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 4
+                spacing: 2
 
                 Text {
                     objectName: "libraryRoomTitle"
@@ -187,31 +208,38 @@ Item {
                     ToolTip.text: text
                     ToolTip.delay: 400
                 }
-                Text {
-                    objectName: "libraryRoomSubtitle"
-                    width: parent.width
-                    color: root.mutedTextColor
-                    elide: Text.ElideRight
-                    font.pixelSize: Theme.roomItemSubtitleSize
-                    text: entry.title.length > 0 ? entry.title : entry.roomId
-                    ToolTip.visible: truncated && historyMouse.containsMouse
-                    ToolTip.text: text
-                    ToolTip.delay: 400
-                }
-                Row {
-                    spacing: 6
 
-                    Rectangle {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 7
-                        height: 7
-                        radius: 3.5
-                        color: (entry.active || entry.online) ? Theme.online : Theme.mutedText
-                    }
+                Row {
+                    width: parent.width
+                    spacing: 5
+
                     Text {
+                        id: statusTag
+                        anchors.verticalCenter: parent.verticalCenter
                         color: (entry.active || entry.online) ? Theme.online : root.mutedTextColor
-                        font.pixelSize: Theme.roomItemStatusSize
-                        text: entry.active ? "当前播放" : (entry.online ? "直播中" : (root.favoritesOnly ? "未开播" : ("未开播 · " + root.openedLabel(entry.lastOpenedAtMs))))
+                        font.pixelSize: 11
+                        font.bold: (entry.active || entry.online)
+                        text: entry.active ? "当前播放" : (entry.online ? "直播中" : "未开播")
+                    }
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "·"
+                        color: root.mutedTextColor
+                        font.pixelSize: 11
+                    }
+
+                    Text {
+                        objectName: "libraryRoomSubtitle"
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.max(0, parent.width - statusTag.width - 15)
+                        color: root.mutedTextColor
+                        elide: Text.ElideRight
+                        font.pixelSize: Theme.roomItemSubtitleSize
+                        text: entry.title.length > 0 ? entry.title : entry.roomId
+                        ToolTip.visible: truncated && historyMouse.containsMouse
+                        ToolTip.text: text
+                        ToolTip.delay: 400
                     }
                 }
             }
@@ -221,9 +249,9 @@ Item {
                 objectName: "libraryRoomActionBar"
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                anchors.rightMargin: 5
-                width: 27
-                height: 27
+                anchors.rightMargin: 6
+                width: 28
+                height: 28
 
                 ToolButton {
                     objectName: "openHistoryRoomButton"
@@ -260,6 +288,25 @@ Item {
                             root.controller.removeHistoryRoom(entry.roomId)
                             root.forceRebuild()
                         }
+                    }
+                }
+            }
+
+            MouseArea {
+                id: historySelectArea
+                anchors.left: parent.left
+                anchors.right: roomActionBar.left
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                cursorShape: Qt.PointingHandCursor
+                acceptedButtons: Qt.LeftButton
+                onClicked: {
+                    if (!root.controller) return
+                    if (entry.active) {
+                        root.controller.setPrimaryRoom(entry.roomId)
+                    } else {
+                        root.controller.addRoom(entry.roomId)
+                        root.forceRebuild()
                     }
                 }
             }
