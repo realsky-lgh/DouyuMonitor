@@ -95,14 +95,14 @@ Rectangle {
             width: 28
             height: 28
             radius: 6
-            color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14)
-            border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.45)
+            color: "transparent"
+            border.color: "transparent"
 
             Image {
                 objectName: "brandIcon"
                 anchors.centerIn: parent
-                width: 22
-                height: 22
+                width: 26
+                height: 26
                 source: Qt.resolvedUrl("../assets/douyu_monitor.svg")
                 fillMode: Image.PreserveAspectFit
             }
