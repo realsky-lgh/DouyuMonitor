@@ -55,6 +55,7 @@ public:
     void saveSession();
     void clearSession();
     void validateSession(std::function<void(bool valid)> callback = nullptr);
+    void attemptAutoRelogin(std::function<void(bool success, const QString &message)> callback = nullptr);
     void markSessionExpired(const QString &reason = QString());
     void setSessionFilePath(const QString &filePath) { sessionFilePath_ = filePath; }
     QString sessionFilePath() const;
@@ -86,6 +87,7 @@ private:
     qint64 expireTimestampMs_ = 0;
 
     DouyuUserSession session_;
+    DouyuUserSession lastKnownSession_;
     QString sessionFilePath_;
     bool isSessionExpired_ = false;
 };

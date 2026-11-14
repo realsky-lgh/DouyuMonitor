@@ -219,7 +219,29 @@ Dialog {
         // 底部刷新与取消操作
         Row {
             anchors.horizontalCenter: parent.horizontalCenter
-            spacing: 12
+            spacing: 10
+
+            Button {
+                text: "尝试自动登录"
+                enabled: !root.isLoggedIn
+                onClicked: {
+                    if (root.controller) root.controller.autoRelogin()
+                }
+                background: Rectangle {
+                    implicitWidth: 100
+                    implicitHeight: 34
+                    radius: Theme.radiusSmall
+                    color: parent.down ? Theme.well : (parent.hovered ? Theme.controlSurface : "transparent")
+                    border.color: Theme.accent
+                }
+                contentItem: Text {
+                    text: parent.text
+                    color: Theme.accent
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    font.pixelSize: 13
+                }
+            }
 
             Button {
                 text: "刷新二维码"

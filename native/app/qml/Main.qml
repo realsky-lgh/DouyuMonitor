@@ -555,6 +555,9 @@ ApplicationWindow {
 
     Connections {
         target: root.appController
+        function onRequestOpenLoginDialog() {
+            douyuLoginDialog.open()
+        }
         function onDanmakuSendResult(roomId, success, errorMessage) {
             if (root.workspaceModel) {
                 if (success) {

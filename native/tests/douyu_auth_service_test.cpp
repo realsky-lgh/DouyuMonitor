@@ -10,6 +10,7 @@ private slots:
     void cancelResetsToIdle();
     void logoutClearsSession();
     void markSessionExpiredUpdatesLoginStateAndEmitsSignal();
+    void attemptAutoReloginWithoutSavedCredentialsFailsGracefully();
     void sessionSaveAndLoadPersistence();
     void qrCodeImageProviderGeneratesValidImage();
 };
@@ -118,6 +119,22 @@ void DouyuAuthServiceTest::markSessionExpiredUpdatesLoginStateAndEmitsSignal()
     QVERIFY(!auth.isLoggedIn());
     QVERIFY(auth.isSessionExpired());
     QVERIFY(!QFile::exists(sessionFile));
+}
+
+void DouyuAuthServiceTest::attemptAutoReloginWithoutSavedCredentialsFailsGracefully()
+{
+    DouyuAuthService auth;
+    auth.setSessionFilePath(QStringLiteral("/tmp/non_existent_session_12345.json"));
+    bool callbackInvoked = false;
+    bool resultSuccess = true;
+    auth.attemptAutoRelogin([&](bool success, const QString &message) {
+        callbackInvoked = true;
+        resultSuccess = success;
+        QVERIFY(!message.isEmpty());
+    });
+    QVERIFY(callbackInvoked);
+    QVERIFY(!resultSuccess);
+    QVERIFY(!auth.isLoggedIn());
 }
 
 void DouyuAuthServiceTest::qrCodeImageProviderGeneratesValidImage()

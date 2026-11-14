@@ -97,6 +97,15 @@ void DanmakuSessionManager::retry(const QString &roomId)
     it.value()->client->retry();
 }
 
+void DanmakuSessionManager::retryAll()
+{
+    for (auto it = sessions_.begin(); it != sessions_.end(); ++it) {
+        if (it.value() && it.value()->client) {
+            it.value()->client->retry();
+        }
+    }
+}
+
 std::optional<DanmakuMessage> DanmakuSessionManager::takeNextMessage(const QString &roomId)
 {
     auto it = sessions_.find(roomId);

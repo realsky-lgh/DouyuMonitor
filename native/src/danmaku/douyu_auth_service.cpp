@@ -78,6 +78,7 @@ void DouyuAuthService::logout()
         validationTimer_->stop();
     }
     isSessionExpired_ = false;
+    lastKnownSession_ = DouyuUserSession{};
     clearSession();
     session_ = DouyuUserSession{};
     if (nam_ && nam_->cookieJar()) {
@@ -526,6 +527,87 @@ void DouyuAuthService::validateSession(std::function<void(bool valid)> callback)
     });
 }
 
+void DouyuAuthService::attemptAutoRelogin(std::function<void(bool success, const QString &message)> callback)
+{
+    if (!session_.isValid()) {
+        loadSession();
+    }
+    if (!session_.isValid() && lastKnownSession_.isValid()) {
+        session_ = lastKnownSession_;
+    }
+
+    if (!session_.isValid()) {
+        if (callback) {
+            callback(false, QStringLiteral("未检测到本地历史登录凭据，需要人工扫码登录"));
+        }
+        return;
+    }
+
+    const QUrl validateUrl(QStringLiteral("https://www.douyu.com/wgapi/livenc/liveweb/follow/list"));
+    QNetworkRequest request(validateUrl);
+    request.setRawHeader("User-Agent", kUserAgent.toUtf8());
+    request.setRawHeader("Referer", QStringLiteral("https://www.douyu.com").toUtf8());
+
+    QStringList cookieParts;
+    for (auto it = session_.cookies.cbegin(); it != session_.cookies.cend(); ++it) {
+        cookieParts.append(QStringLiteral("%1=%2").arg(it.key(), it.value()));
+    }
+    request.setRawHeader("Cookie", cookieParts.join(QStringLiteral("; ")).toUtf8());
+
+    QNetworkReply *reply = nam_->get(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, callback]() {
+        reply->deleteLater();
+        if (reply->error() != QNetworkReply::NoError) {
+            if (callback) {
+                callback(false, QStringLiteral("网络请求失败，未能完成自动重新登录"));
+            }
+            return;
+        }
+
+        const auto rawHeaderPairs = reply->rawHeaderPairs();
+        for (const auto &pair : rawHeaderPairs) {
+            if (pair.first.compare("Set-Cookie", Qt::CaseInsensitive) == 0) {
+                const QString raw = QString::fromUtf8(pair.second);
+                const QString firstPart = raw.section(QLatin1Char(';'), 0, 0).trimmed();
+                const int eqIdx = firstPart.indexOf(QLatin1Char('='));
+                if (eqIdx > 0) {
+                    const QString key = firstPart.left(eqIdx).trimmed();
+                    const QString val = firstPart.mid(eqIdx + 1).trimmed();
+                    session_.cookies[key] = val;
+                }
+            }
+        }
+
+        const QByteArray body = reply->readAll();
+        const QJsonDocument doc = QJsonDocument::fromJson(body);
+        if (doc.isObject()) {
+            const QJsonObject root = doc.object();
+            const int code = root.value(QStringLiteral("code")).toInt(root.value(QStringLiteral("error")).toInt(0));
+            const QString msg = root.value(QStringLiteral("msg")).toString();
+
+            if (code != 0 || msg.contains(QStringLiteral("未登陆")) || msg.contains(QStringLiteral("过期"))) {
+                markSessionExpired(QStringLiteral("登录凭证已过期，请重新扫码登录"));
+                if (callback) {
+                    callback(false, QStringLiteral("登录凭据已失效，需要人工扫码登录"));
+                }
+                return;
+            }
+        }
+
+        isSessionExpired_ = false;
+        lastKnownSession_ = session_;
+        saveSession();
+        if (validationTimer_ && !validationTimer_->isActive()) {
+            validationTimer_->start();
+        }
+        emit loginStateChanged(true);
+        emit userProfileChanged(session_.uid, session_.nickname, session_.avatarUrl);
+        if (callback) {
+            callback(true, QStringLiteral("自动重新登录成功"));
+        }
+    });
+}
+
 void DouyuAuthService::markSessionExpired(const QString &reason)
 {
     if (isSessionExpired_) {
@@ -534,6 +616,9 @@ void DouyuAuthService::markSessionExpired(const QString &reason)
     isSessionExpired_ = true;
     if (validationTimer_) {
         validationTimer_->stop();
+    }
+    if (session_.isValid()) {
+        lastKnownSession_ = session_;
     }
     clearSession();
     session_.cookies.clear();

@@ -206,6 +206,8 @@ public:
     Q_INVOKABLE void startQrLogin();
     Q_INVOKABLE void cancelQrLogin();
     Q_INVOKABLE void logout();
+    Q_INVOKABLE void autoRelogin();
+    Q_INVOKABLE void recoverDanmaku(const QString &roomId = QString());
     Q_INVOKABLE void sendDanmaku(const QString &roomId, const QString &content);
 
 #ifdef DOUYU_TESTING
@@ -230,6 +232,7 @@ signals:
     void closeBehaviorChanged();
     void authChanged();
     void qrLoginStateChanged();
+    void requestOpenLoginDialog();
     void danmakuSendResult(const QString &roomId, bool success, const QString &errorMessage);
 
 private:
@@ -245,6 +248,7 @@ private:
     void onFavoriteRoomUpdated(const QString &roomId,
                                const RoomMetadata &metadata,
                                RoomLiveStatus liveStatus);
+    void onDanmakuWatchdogTick();
     void onLibraryRoomCheckFinished(const QString &roomId, bool success);
     void pumpLibraryQueue();
     void flushLibraryNotifications();
@@ -310,4 +314,6 @@ private:
     int qrLoginState_ = 0;
     QString qrLoginUrl_;
     QString qrLoginStatusText_;
+    QTimer *danmakuWatchdogTimer_ = nullptr;
+    qint64 lastAutoReloginTimestampMs_ = 0;
 };

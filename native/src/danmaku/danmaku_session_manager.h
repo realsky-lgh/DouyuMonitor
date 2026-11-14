@@ -30,6 +30,7 @@ public:
 
     void synchronize(const QVector<DanmakuRoomEligibility> &rooms);
     void retry(const QString &roomId);
+    void retryAll();
     std::optional<DanmakuMessage> takeNextMessage(const QString &roomId);
     int pendingCount(const QString &roomId) const;
     int activeSessionCount() const;

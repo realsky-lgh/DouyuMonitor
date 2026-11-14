@@ -89,6 +89,7 @@ class DouyuDanmakuClientTest final : public QObject {
 
 private slots:
     void sendsLoginJoinAndHeartbeatAfterOpening();
+    void sendsAuthenticatedLoginWhenSessionProvided();
     void becomesConnectedAfterLoginResponse();
     void rotatesEndpointsAndRetriesWithConfiguredDelays();
     void blocksOnExplicitAuthenticationAndWaitsForManualRetry();
@@ -144,6 +145,38 @@ void DouyuDanmakuClientTest::sendsLoginJoinAndHeartbeatAfterOpening()
     scheduler.advanceBy(45'000);
     QCOMPARE(frameFields(socketPtr->writes.constLast()).value(QStringLiteral("type")),
              QStringLiteral("mrkl"));
+}
+
+void DouyuDanmakuClientTest::sendsAuthenticatedLoginWhenSessionProvided()
+{
+    auto socket = std::make_unique<FakeDanmakuSocket>();
+    auto *socketPtr = socket.get();
+    FakeDanmakuTimerScheduler scheduler;
+
+    DouyuUserSession session;
+    session.uid = QStringLiteral("999888");
+    session.username = QStringLiteral("shark_user");
+    session.cookies[QStringLiteral("acf_ltkid")] = QStringLiteral("ltkid_123");
+    session.cookies[QStringLiteral("acf_stk")] = QStringLiteral("stk_456");
+    session.cookies[QStringLiteral("acf_biz")] = QStringLiteral("1");
+    session.cookies[QStringLiteral("dy_did")] = QStringLiteral("device_id_777");
+
+    DouyuDanmakuClient client(QStringLiteral("12345"), std::move(socket), &scheduler, [session] {
+        return session;
+    });
+
+    client.start();
+    socketPtr->emitConnectedSignal();
+
+    QVERIFY(socketPtr->writes.size() >= 2);
+    const auto loginFields = frameFields(socketPtr->writes.at(0));
+    QCOMPARE(loginFields.value(QStringLiteral("type")), QStringLiteral("loginreq"));
+    QCOMPARE(loginFields.value(QStringLiteral("roomid")), QStringLiteral("12345"));
+    QCOMPARE(loginFields.value(QStringLiteral("username")), QStringLiteral("shark_user"));
+    QCOMPARE(loginFields.value(QStringLiteral("ltkid")), QStringLiteral("ltkid_123"));
+    QCOMPARE(loginFields.value(QStringLiteral("stk")), QStringLiteral("stk_456"));
+    QCOMPARE(loginFields.value(QStringLiteral("devid")), QStringLiteral("device_id_777"));
+    QVERIFY(!loginFields.value(QStringLiteral("vk")).isEmpty());
 }
 
 void DouyuDanmakuClientTest::becomesConnectedAfterLoginResponse()

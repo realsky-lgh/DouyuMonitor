@@ -159,6 +159,11 @@ void DanmakuController::setConfiguration(const NativeDanmakuConfiguration &confi
     emitSettingsIfChanged(previous);
 }
 
+void DanmakuController::setSessionProvider(std::function<DouyuUserSession()> provider)
+{
+    sessionProvider_ = std::move(provider);
+}
+
 void DanmakuController::synchronize(const QVector<DanmakuRoomEligibility> &rooms)
 {
     sessions_.synchronize(rooms);
@@ -303,6 +308,7 @@ QVariantMap DanmakuController::statusForRoom(const QString &roomId) const
     return {
         {QStringLiteral("state"), stateString(status.state)},
         {QStringLiteral("errorCode"), errorString(status.errorCode)},
+        {QStringLiteral("error"), errorString(status.errorCode)},
         {QStringLiteral("attempt"), status.attempt},
     };
 }
@@ -330,7 +336,11 @@ void DanmakuController::clearStats(const QString &roomId)
 void DanmakuController::retry(const QString &roomId)
 {
     qInfo().noquote() << "danmaku retry room=" << roomId;
-    sessions_.retry(roomId);
+    if (roomId.isEmpty()) {
+        sessions_.retryAll();
+    } else {
+        sessions_.retry(roomId);
+    }
 }
 
 void DanmakuController::clearRoom(const QString &roomId)

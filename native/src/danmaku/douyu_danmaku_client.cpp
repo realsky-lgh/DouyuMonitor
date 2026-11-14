@@ -2,6 +2,8 @@
 
 #include "danmaku/douyu_danmaku_protocol.h"
 
+#include <QCryptographicHash>
+#include <QDateTime>
 #include <QUrl>
 
 #include <array>
@@ -27,9 +29,11 @@ const std::array<QString, 6> kEndpoints = {
 DouyuDanmakuClient::DouyuDanmakuClient(const QString &roomId,
                                        std::unique_ptr<DanmakuSocket> socket,
                                        DanmakuTimerScheduler *scheduler,
+                                       std::function<DouyuUserSession()> sessionProvider,
                                        QObject *parent)
     : DanmakuClient(parent)
     , roomId_(roomId)
+    , sessionProvider_(std::move(sessionProvider))
     , socket_(std::move(socket))
     , scheduler_(scheduler)
 {
@@ -112,10 +116,49 @@ void DouyuDanmakuClient::cancelTimers()
 
 void DouyuDanmakuClient::sendLoginAndJoin()
 {
-    const auto login = DouyuDanmakuProtocol::serializeStt({
+    DouyuUserSession session;
+    if (sessionProvider_) {
+        session = sessionProvider_();
+    }
+
+    QMap<QString, QString> loginFields = {
         {QStringLiteral("type"), QStringLiteral("loginreq")},
         {QStringLiteral("roomid"), roomId_},
-    });
+    };
+
+    if (session.isValid()) {
+        const qint64 ts = QDateTime::currentSecsSinceEpoch();
+        QString did = session.cookies.value(QStringLiteral("dy_did"));
+        if (did.isEmpty()) {
+            did = session.cookies.value(QStringLiteral("acf_devid"));
+        }
+        if (did.isEmpty()) {
+            did = QStringLiteral("10000000000000000000000000001501");
+        }
+        const QString secret = QString::number(ts) + QStringLiteral("r5*^5;}2#${XF[h+;'./.Q'1;,-]f'p[") + did;
+        const QByteArray vk = QCryptographicHash::hash(secret.toUtf8(), QCryptographicHash::Md5).toHex();
+
+        loginFields[QStringLiteral("dfl")] = QStringLiteral("sn@AA=107@ASss@AA=1@Ssn@AA=108@ASss@AA=1@Ssn@AA=105@ASss@AA=1@Ssn@AA=110@ASss@AA=1");
+        loginFields[QStringLiteral("username")] = session.username.isEmpty() ? session.uid : session.username;
+        loginFields[QStringLiteral("password")] = QString();
+        loginFields[QStringLiteral("ltkid")] = session.cookies.value(QStringLiteral("acf_ltkid"));
+        loginFields[QStringLiteral("biz")] = session.cookies.value(QStringLiteral("acf_biz"));
+        loginFields[QStringLiteral("stk")] = session.cookies.value(QStringLiteral("acf_stk"));
+        loginFields[QStringLiteral("devid")] = did;
+        loginFields[QStringLiteral("ct")] = session.cookies.value(QStringLiteral("acf_ct"), QStringLiteral("0"));
+        loginFields[QStringLiteral("pt")] = QStringLiteral("2");
+        loginFields[QStringLiteral("cvr")] = QStringLiteral("0");
+        loginFields[QStringLiteral("tvr")] = QStringLiteral("7");
+        loginFields[QStringLiteral("apd")] = QString();
+        loginFields[QStringLiteral("rt")] = QString::number(ts);
+        loginFields[QStringLiteral("vk")] = QString::fromLatin1(vk);
+        loginFields[QStringLiteral("ver")] = QStringLiteral("20190610");
+        loginFields[QStringLiteral("aver")] = QStringLiteral("218101901");
+        loginFields[QStringLiteral("dmbt")] = QStringLiteral("chrome");
+        loginFields[QStringLiteral("dmbv")] = QStringLiteral("81");
+    }
+
+    const auto login = DouyuDanmakuProtocol::serializeStt(loginFields);
     const auto join = DouyuDanmakuProtocol::serializeStt({
         {QStringLiteral("type"), QStringLiteral("joingroup")},
         {QStringLiteral("rid"), roomId_},

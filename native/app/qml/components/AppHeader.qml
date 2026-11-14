@@ -563,6 +563,24 @@ Rectangle {
         }
 
         MenuItem {
+            text: "模拟重新登录 (自动)"
+            onTriggered: {
+                if (root.controller) root.controller.autoRelogin()
+            }
+            contentItem: Text {
+                text: parent.text
+                color: Theme.accent
+                leftPadding: 12
+                font.pixelSize: 13
+                verticalAlignment: Text.AlignVCenter
+            }
+            background: Rectangle {
+                color: parent.highlighted ? Theme.well : "transparent"
+                radius: Theme.radiusSmall
+            }
+        }
+
+        MenuItem {
             text: "重新扫码登录"
             onTriggered: {
                 if (root.controller) {

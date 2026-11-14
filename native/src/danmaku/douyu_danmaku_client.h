@@ -3,6 +3,7 @@
 #include "danmaku/danmaku_socket.h"
 #include "danmaku/danmaku_timer_scheduler.h"
 #include "danmaku/danmaku_types.h"
+#include "danmaku/douyu_auth_service.h"
 #include "danmaku/douyu_danmaku_protocol.h"
 
 #include <QMap>
@@ -33,6 +34,7 @@ public:
     DouyuDanmakuClient(const QString &roomId,
                        std::unique_ptr<DanmakuSocket> socket,
                        DanmakuTimerScheduler *scheduler,
+                       std::function<DouyuUserSession()> sessionProvider = nullptr,
                        QObject *parent = nullptr);
 
     void start() override;
@@ -56,6 +58,7 @@ private:
     bool isAuthenticationClose(int code, const QString &reason) const;
 
     QString roomId_;
+    std::function<DouyuUserSession()> sessionProvider_;
     std::unique_ptr<DanmakuSocket> socket_;
     DanmakuTimerScheduler *scheduler_ = nullptr;
     DanmakuConnectionStatus status_;

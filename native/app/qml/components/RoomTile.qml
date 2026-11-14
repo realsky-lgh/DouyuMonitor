@@ -735,17 +735,20 @@ FocusScope {
                 ToolButton {
                     width: 32; height: 32
                     Accessible.name: root.danmakuState === "failed" || root.danmakuState === "platform-blocked"
-                                     ? "重试弹幕连接"
+                                     ? "修复并重连弹幕"
                                      : (root.danmakuState === "waiting"
                                         ? "等待弹幕会话"
                                         : (root.danmakuEnabled ? "隐藏弹幕" : "显示弹幕"))
                     ToolTip.visible: hovered
                     ToolTip.text: root.danmakuErrorCode === "AUTH_REQUIRED"
-                                  ? "弹幕连接需要认证，点击重试" : Accessible.name
+                                  ? "弹幕连接需要认证，点击自动重新登录/重试"
+                                  : (root.danmakuState === "failed" || root.danmakuState === "platform-blocked"
+                                     ? "弹幕异常，点击自动重新登录/重试"
+                                     : Accessible.name)
                     onClicked: {
                         if (!root.controller) return
                         if (root.danmakuState === "failed" || root.danmakuState === "platform-blocked") {
-                            root.controller.danmaku.retry(root.roomId)
+                            root.controller.recoverDanmaku(root.roomId)
                         } else if (root.danmakuState === "waiting") {
                             return
                         } else {

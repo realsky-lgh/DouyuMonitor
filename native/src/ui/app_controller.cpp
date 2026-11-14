@@ -172,11 +172,13 @@ AppController::AppController(QString serviceProgram,
     guildRosterNotifyTimer_->setSingleShot(true);
     connect(guildRosterNotifyTimer_, &QTimer::timeout, this, &AppController::guildRosterChanged);
     if (!danmakuFactory) {
-        danmakuFactory = [](const QString &roomId, QObject *parent) {
+        danmakuFactory = [this](const QString &roomId, QObject *parent) {
             auto *scheduler = new QtDanmakuTimerScheduler(parent);
             auto socket = std::make_unique<QtDanmakuSocket>(parent);
             return std::unique_ptr<DanmakuClient>(
-                new DouyuDanmakuClient(roomId, std::move(socket), scheduler, parent));
+                new DouyuDanmakuClient(roomId, std::move(socket), scheduler,
+                    [this] { return authService_ ? authService_->session() : DouyuUserSession{}; },
+                    parent));
         };
     }
     service_ = std::make_unique<StreamgetProcessClient>(std::move(serviceProgram), QStringList{}, this);
@@ -324,7 +326,13 @@ AppController::AppController(QString serviceProgram,
         qrLoginStatusText_ = statusText;
         emit qrLoginStateChanged();
     });
-    connect(authService_.get(), &DouyuAuthService::loginStateChanged, this, [this] {
+    connect(authService_.get(), &DouyuAuthService::loginStateChanged, this, [this](bool loggedIn) {
+        if (loggedIn) {
+            synchronizeDanmaku();
+            if (danmaku_) {
+                danmaku_->retry(QString());
+            }
+        }
         emit authChanged();
     });
     connect(authService_.get(), &DouyuAuthService::sessionExpired, this, [this](const QString &reason) {
@@ -344,6 +352,11 @@ AppController::AppController(QString serviceProgram,
         }
         emit danmakuSendResult(roomId, success, errorMessage);
     });
+
+    danmakuWatchdogTimer_ = new QTimer(this);
+    danmakuWatchdogTimer_->setInterval(20000);
+    connect(danmakuWatchdogTimer_, &QTimer::timeout, this, &AppController::onDanmakuWatchdogTick);
+    danmakuWatchdogTimer_->start();
 
     authService_->loadSession();
 }
@@ -437,6 +450,7 @@ void AppController::shutdown()
 {
     if (shuttingDown_) return;
     shuttingDown_ = true;
+    if (danmakuWatchdogTimer_ != nullptr) danmakuWatchdogTimer_->stop();
     if (libraryQueueTimer_ != nullptr) libraryQueueTimer_->stop();
     if (libraryNotifyTimer_ != nullptr) libraryNotifyTimer_->stop();
     libraryPendingQueue_.clear();
@@ -2272,6 +2286,87 @@ void AppController::logout()
 {
     if (authService_) {
         authService_->logout();
+    }
+}
+
+void AppController::autoRelogin()
+{
+    recoverDanmaku(QString());
+}
+
+void AppController::recoverDanmaku(const QString &roomId)
+{
+    lastAutoReloginTimestampMs_ = QDateTime::currentMSecsSinceEpoch();
+    if (authService_) {
+        if (workspace_) {
+            workspace_->setLastMessage(QStringLiteral("正在尝试自动重新登录并恢复弹幕..."), QStringLiteral("info"), 3000);
+        }
+        authService_->attemptAutoRelogin([this, roomId](bool success, const QString &message) {
+            if (success) {
+                if (workspace_) {
+                    workspace_->setLastMessage(QStringLiteral("自动重新登录成功，正在恢复弹幕连接"), QStringLiteral("success"), 4000);
+                }
+                if (danmaku_) {
+                    if (!roomId.isEmpty()) {
+                        danmaku_->retry(roomId);
+                    } else {
+                        danmaku_->retry(QString());
+                    }
+                }
+            } else {
+                if (workspace_) {
+                    workspace_->setLastMessage(QStringLiteral("自动重新登录失败，请使用手机斗鱼扫码登录"), QStringLiteral("warning"), 5000);
+                }
+                startQrLogin();
+                emit requestOpenLoginDialog();
+            }
+        });
+    } else if (danmaku_) {
+        if (!roomId.isEmpty()) {
+            danmaku_->retry(roomId);
+        } else {
+            danmaku_->retry(QString());
+        }
+    }
+}
+
+void AppController::onDanmakuWatchdogTick()
+{
+    if (shuttingDown_ || !danmaku_ || !coordinator_) return;
+    if (!snapshot_.danmaku.globalEnabled) return;
+
+    const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+    constexpr qint64 kAutoReloginCooldownMs = 120000;
+    if (nowMs - lastAutoReloginTimestampMs_ < kAutoReloginCooldownMs) {
+        return;
+    }
+
+    const RoomSnapshots snapshots = coordinator_->roomSnapshots();
+    for (const RoomSnapshot &room : snapshots) {
+        if (!snapshot_.activeRoomIds.contains(room.roomId)) continue;
+        if (room.liveStatus != RoomLiveStatus::Online) continue;
+
+        const NativeRoomRecord *record = libraryRecord(room.roomId);
+        if (!record || !record->danmakuEnabled) continue;
+
+        const QVariantMap status = danmaku_->statusForRoom(room.roomId);
+        const QString state = status.value(QStringLiteral("state")).toString();
+        const QString err = status.value(QStringLiteral("errorCode")).toString();
+
+        bool needsRecovery = false;
+        if (state == QLatin1String("platform-blocked") || err == QLatin1String("AUTH_REQUIRED")) {
+            needsRecovery = true;
+        } else if (state == QLatin1String("failed")) {
+            needsRecovery = true;
+        }
+
+        if (needsRecovery) {
+            lastAutoReloginTimestampMs_ = nowMs;
+            qInfo().noquote() << "Danmaku watchdog detected issue for room" << room.roomId
+                              << "state=" << state << "error=" << err << "- attempting auto relogin";
+            recoverDanmaku(room.roomId);
+            break;
+        }
     }
 }
 

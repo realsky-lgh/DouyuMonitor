@@ -1,6 +1,7 @@
 #pragma once
 
 #include "danmaku/danmaku_session_manager.h"
+#include "danmaku/douyu_auth_service.h"
 #include "workspace/native_workspace_types.h"
 
 #include <QObject>
@@ -24,6 +25,7 @@ public:
     void setPresentationSuspended(bool suspended);
 
     void setConfiguration(const NativeDanmakuConfiguration &configuration);
+    void setSessionProvider(std::function<DouyuUserSession()> provider);
     void synchronize(const QVector<DanmakuRoomEligibility> &rooms);
     void stopAll();
 
@@ -63,6 +65,7 @@ private:
     void emitSettingsIfChanged(const NativeDanmakuConfiguration &previous);
 
     NativeDanmakuConfiguration configuration_;
+    std::function<DouyuUserSession()> sessionProvider_;
     DanmakuSessionManager sessions_;
     QHash<QString, QSet<QString>> sessionBlockedTexts_;
     bool presentationSuspended_ = false;
