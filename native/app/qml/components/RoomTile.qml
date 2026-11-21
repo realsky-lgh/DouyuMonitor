@@ -679,7 +679,7 @@ FocusScope {
                         width: roomVolumeSlider.availableWidth
                         height: implicitHeight
                         radius: 2
-                        color: roomVolumeSlider.palette.dark
+                        color: roomVolumeSlider.palette.midlight
                         scale: roomVolumeSlider.horizontal && roomVolumeSlider.mirrored ? -1 : 1
 
                         Rectangle {
@@ -687,7 +687,7 @@ FocusScope {
                             width: roomVolumeSlider.position * parent.width
                             height: parent.height
                             radius: 2
-                            color: roomVolumeSlider.palette.midlight
+                            color: roomVolumeSlider.palette.dark
                         }
                     }
                     handle: Rectangle {

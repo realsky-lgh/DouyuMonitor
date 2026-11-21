@@ -2816,8 +2816,8 @@ void QmlInteractionTest::exposesRoomVolumeAndRefreshControls()
     QVERIFY(sliderBg != nullptr);
     QVERIFY(sliderProgress != nullptr);
     const QPalette sliderPalette = slider->property("palette").value<QPalette>();
-    QCOMPARE(sliderBg->property("color").value<QColor>(), sliderPalette.dark().color());
-    QCOMPARE(sliderProgress->property("color").value<QColor>(), sliderPalette.midlight().color());
+    QCOMPARE(sliderBg->property("color").value<QColor>(), sliderPalette.midlight().color());
+    QCOMPARE(sliderProgress->property("color").value<QColor>(), sliderPalette.dark().color());
 
     slider->setProperty("value", 0.35);
     QVERIFY(QMetaObject::invokeMethod(slider, "moved"));

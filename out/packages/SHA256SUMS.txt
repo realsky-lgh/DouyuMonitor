@@ -1,2 +1,2 @@
-d538b05810a01d976b164f75226f3cea26dbac7be3b94ffc782451745802be1f  DouyuMonitor-0.2.39-linux-x64.tar.gz
-df01bdbc8dc35558a228aba9119982aed1fbaaceb3e1e747cf480d6fccc05ee5  douyu-monitor_0.2.39_amd64.deb
+35fff1a13ebfc492355818c6796f0ab8bc9fce827cd9a38c2d16ad8d00c6bac4  DouyuMonitor-0.2.40-linux-x64.tar.gz
+aebdaa4121dcab896c749958a0d6f50f7785e238c60350cb580bea52216980cf  douyu-monitor_0.2.40_amd64.deb
